@@ -1,10 +1,4 @@
 ## Parallel and Distributed Systems Assignment 1
-
-- [Parallel and Distributed Systems Assignment 1](#parallel-and-distributed-systems-assignment-1)
-  - [Dependencies](#dependencies)
-      - [1. ANSI C library for Matrix Market I/O](#1-ansi-c-library-for-matrix-market-io)
-  - [Graphs source](#graphs-source)
-
 ### Dependencies
 ##### 1. ANSI C library for Matrix Market I/O
 
