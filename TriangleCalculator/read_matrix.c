@@ -91,7 +91,7 @@ int main(int argc, char *argv[]){
 
     mm_write_banner(stdout, matcode);
     mm_write_mtx_crd_size(stdout, M, N, nz);
-    for (i=0; i<100; i++)
+    for (i=0; i<1000; i++)
         fprintf(stdout, "%d %d %20.19g\n", I[i]+1, J[i]+1, val[i]);
 
     return 0;
