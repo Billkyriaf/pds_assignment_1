@@ -5,4 +5,4 @@ set(CMAKE_C_STANDARD 11)
 
 include_directories(libraries)
 
-add_executable(TriangleCalculator main.c libraries/mmio.c libraries/mmio.h)
+add_executable(TriangleCalculator read_matrix.c libraries/mmio.c libraries/mmio.h)
