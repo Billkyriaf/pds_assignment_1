@@ -3,4 +3,6 @@ project(TriangleCalculator C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(TriangleCalculator main.c)
+include_directories(libraries)
+
+add_executable(TriangleCalculator main.c libraries/mmio.c libraries/mmio.h)
