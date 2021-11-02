@@ -1,7 +1,16 @@
 ## Parallel and Distributed Systems Assignment 1
 
 - [Parallel and Distributed Systems Assignment 1](#parallel-and-distributed-systems-assignment-1)
+  - [Dependencies](#dependencies)
+      - [1. ANSI C library for Matrix Market I/O](#1-ansi-c-library-for-matrix-market-io)
   - [Graphs source](#graphs-source)
+
+### Dependencies
+##### 1. ANSI C library for Matrix Market I/O
+
+The [ANSI C library for Matrix Market I/O](https://math.nist.gov/MatrixMarket/mmio-c.html) library is used for reading matrix market files that contain the graphs. The project already contains the files requiered for compiling and linking the library [here](TriangleCalculator/libraries). Also a simple example [file](TriangleCalculator/read_matrix.c) can be found in the project used to demonstrate the read functionality of the library.
+
+
 ### Graphs source
 
 |                                    Name                                     | Excecution time |
