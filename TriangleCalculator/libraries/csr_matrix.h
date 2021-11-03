@@ -1,11 +1,9 @@
-#ifndef TRIANGLECALCULATOR_CSR_MATRIX_H
-#define TRIANGLECALCULATOR_CSR_MATRIX_H
+#ifndef TRIANGLE_CALCULATOR_CSR_MATRIX_H
+#define TRIANGLE_CALCULATOR_CSR_MATRIX_H
 
-#define PI 3.14
+#include "matrix_manipulation.h"
 
-
-int test(int *p);
-
+void printCSR(CSR matrix);
 
 
 #endif
