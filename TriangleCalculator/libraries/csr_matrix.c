@@ -4,7 +4,7 @@
 #include "matrix_manipulation.h"
 #include "mmio.h"
 
-
+// Reads matrix from file
 int readMTX(char *fileName, CSR *matrix){
     FILE *f;
     MM_typecode matrixCode;
