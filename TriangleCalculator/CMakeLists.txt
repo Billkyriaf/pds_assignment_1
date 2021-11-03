@@ -4,6 +4,8 @@ project(TriangleCalculator C)
 set(CMAKE_C_STANDARD 11)
 
 include_directories(ext_libraries)
+include_directories(libraries)
 
 add_executable(TriangleCalculator read_matrix.c ext_libraries/mmio.c ext_libraries/mmio.h)
 add_executable(SerialTriangle triangles_serial.c ext_libraries/mmio.c ext_libraries/mmio.h)
+add_executable(MatrixManipulation libraries/matrix_manipulation.c)
