@@ -4,7 +4,7 @@
 
 The objective of this assignment is to calculate the number of triangles in a given graph. The graphs given are large graphs with unweighted edges. Their matixes are sparse and very large to the point they don't fit in memory. To overcome this problem we use the [CSR](https://www.geeksforgeeks.org/sparse-matrix-representations-set-3-csr/?ref=lbp) (Compressed Sparse Row) representation. The graphs are provided in matrix market format and their CSR vectors must be computed. After that we square the initial sparse matrix and from the computed matrix we keep only the elements in the places that are non zero in the initial matrix.
 <br/>
-The first part of the project is to calculate the number of triangles with serial programming and confirm that the proccess works. Afterward the workload must be computed using parallel programming for optimal performance using pthreads openMP and Cilk.
+The first part of the project is to calculate the number of triangles with serial programming and confirm that the proccess works. Afterwards the workload must be computed using parallel programming for optimal performance using pthreads openMP and Cilk.
 
 ### Dependencies
 ##### 1. ANSI C library for Matrix Market I/O
