@@ -3,7 +3,7 @@ project(TriangleCalculator C)
 
 set(CMAKE_C_STANDARD 11)
 
-include_directories(libraries)
+include_directories(ext_libraries)
 
-add_executable(TriangleCalculator read_matrix.c libraries/mmio.c libraries/mmio.h)
-add_executable(SerialTriangle triangles_serial.c libraries/mmio.c libraries/mmio.h)
+add_executable(TriangleCalculator read_matrix.c ext_libraries/mmio.c ext_libraries/mmio.h)
+add_executable(SerialTriangle triangles_serial.c ext_libraries/mmio.c ext_libraries/mmio.h)
