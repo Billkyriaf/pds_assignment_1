@@ -10,6 +10,8 @@ The first part of the project is to calculate the number of triangles with seria
 ##### 1. ANSI C library for Matrix Market I/O
 
 The [ANSI C library for Matrix Market I/O](https://math.nist.gov/MatrixMarket/mmio-c.html) library is used for reading matrix market files that contain the graphs. The project already contains the files requiered for compiling and linking the library [here](TriangleCalculator/libraries). Also a simple example [file](TriangleCalculator/read_matrix.c) can be found in the project used to demonstrate the read functionality of the library.
+<br/>
+The Matrix Market standard can be found [here](https://networkrepository.com/mtx-matrix-market-format.html). In general _**coordinate pattern symmetric**_ matrices are used. The graphs represented in those matrices are _**Unweighted**_ so the weight for each edge is 1.
 
 ### Graphs source
 
