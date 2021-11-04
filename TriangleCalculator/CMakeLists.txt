@@ -8,6 +8,5 @@ include_directories(libraries)
 
 add_executable(TriangleCalculator read_matrix.c ext_libraries/mmio.c)
 add_executable(SerialTriangle triangles_serial.c ext_libraries/mmio.c libraries/csr_matrix.c)
-add_executable(Csr libraries/csr_matrix.c)
 add_executable(MatrixManipulation libraries/matrix_manipulation.c)
-
+add_executable(Csr libraries/csr_matrix.c ext_libraries/mmio.c libraries/csr_matrix.h)
