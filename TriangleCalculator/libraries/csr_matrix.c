@@ -6,71 +6,44 @@
 #include "matrix_manipulation.h"
 #include "mmio.h"
 
+/**
+ * @var cr
+ * @var nextItem
+ */
+struct crs{
+    int cr;
+    int init;
+    struct crs *nextItem;
+};
 
-void printArray(int **arr, int size)
-{
-    int i;
-    for (i=0; i < size; i++)
-        fprintf(stdout, "[%d, %d]\n", arr[i][0], arr[i][1]);
-}
+typedef struct crs RowCol;
 
-void swap(int *i1, int *j1, int *i2, int *j2){
-    int temp = *i1;
-    *i1 = *i2;
-    *i2 = temp;
-
-    temp = *j1;
-    *j1 = *j2;
-    *j2 = temp;
-}
-
-// A function to implement bubble sort
-void bubbleSort(int **graph, int size){
-    bool swapped;
-    for (int i = 0; i < size - 1; i++) {
-        swapped = false;
-
-        // Last i elements are already in place
-        for (int j = 0; j < size - i - 1; j++) {
-            if (graph[j][0] > graph[j + 1][0]) {
-                swap(&graph[j][0], &graph[j][1], &graph[j + 1][0], &graph[j + 1][1]);
-                swapped = true;
-            }
-        }
-
-        // IF no two elements were swapped by inner loop, then break
-        if (swapped == false)
-            break;
+void printCSR(CSR matrix){
+    printf("A:  [");
+    for (int i = 0; i < matrix.nonzero; i++){
+        printf("%d ", matrix.A[i]);
     }
-}
+    printf("]\n");
 
-void createCSR(CSR *matrix, int **graph){
-    int currentCol = 0;
-
-    for (int i = 0; i < matrix->nonzero; ++i) {
-        printf("%d\n", i);
-        for (int j = 0; j < matrix->nonzero; ++j) {
-            if (graph[j][0] == currentCol){
-                matrix->A[i] = 1;
-                matrix->JA[i] = graph[j][1];
-                matrix->IA[graph[j][0] + 1]++;
-                graph[j][0] = -1;
-                break;
-            } else if (j == matrix->nonzero - 1){
-                currentCol++;
-                i--;
-            }
-        }
+    printf("JA: [");
+    for (int i = 0; i < matrix.nonzero; i++){
+        printf("%d ", matrix.JA[i]);
     }
+    printf("]\n");
+
+    printf("IA: [");
+    for (int i = 0; i <= matrix.size; i++){
+        printf("%d ", matrix.IA[i]);
+    }
+    printf("]\n");
+
+    printf("Matrix size: %d\n", matrix.size);
 }
 
-// Reads matrix from file
-int readMTX(char *fileName, CSR *matrix){
+int importFromFile(CSR *matrix, char* fileName){
     FILE *f;
     MM_typecode matrixCode;
     int M, N, nz;
-
-    time_t t1 = time(NULL);
 
     if ((f = fopen(fileName, "r")) == NULL){
         fprintf(stderr, "File %s not found\n", fileName);
@@ -95,55 +68,9 @@ int readMTX(char *fileName, CSR *matrix){
         return MM_PREMATURE_EOF;
 
 
-    // Import the entire list to an array including both elements (from the lower and upper triangular matrix)
-    int **graph = (int **) malloc(2 * nz * sizeof (int *));
-    for (int i = 0; i < 2 * nz; ++i) {
-        graph[i] = (int*) malloc(2 * sizeof (int));
-    }
+    RowCol *lowerGraph = (RowCol *) malloc(N * sizeof (RowCol));
+    RowCol *upperGraph = (RowCol*) malloc(M * sizeof (RowCol));
 
-    int indexI, indexJ;  // The i and j read from the mtx file for each line
-
-    time_t t2 = time(NULL);
-
-    printf("Prep time: %lds\n", (t2 - t1));
-
-    t1 = time(NULL);
-
-    for (int i = 0; i < 2 * nz; i+=2){
-        fscanf(f, "%d %d\n", &indexI, &indexJ); // ...read the next line from the file
-
-        // Adjust from 1-base to 0-base
-        indexJ--;
-        indexI--;
-
-        graph[i][0] = indexJ;
-        graph[i][1] = indexI;
-
-        graph[i + 1][0] = indexI;
-        graph[i + 1][1] = indexJ;
-    }
-
-    t2 = time(NULL);
-    printf("Read time: %lds\n", (t2 - t1));
-
-    // Close the file
-    if (f != stdin)
-        fclose(f);
-    free(f);
-
-    /*
-    t1 = time(NULL);
-    // Sort the graph
-    bubbleSort(graph, 2 * nz);
-
-    t2 = time(NULL);
-    printf("Sorting time: %lds\n", (t2 - t1));
-
-    // printArray(graph, 2 * nz);
-    */
-
-
-    t1 = time(NULL);
     // allocate memory for csr vectors
     matrix->A = (int *) malloc(2 * nz * sizeof(int));  // All the nonzero elements of the array
     matrix->JA = (int *) malloc(2 * nz * sizeof(int));  // The columns (j) of all the nonzero elements in the array
@@ -160,52 +87,114 @@ int readMTX(char *fileName, CSR *matrix){
     matrix->size = M;
     matrix->nonzero = 2 * nz;  // The number of nonzero elements and consequently the length of the A and JA vectors
 
-    t2 = time(NULL);
-    printf("CSR prep time: %lds\n", (t2 - t1));
+    int indexI, indexJ;
 
-    t1 = time(NULL);
+    for (int i = 0; i < nz; i++){
+        fscanf(f, "%d %d\n", &indexI, &indexJ); // ...read the next line from the file
 
-    /*
-    // For all the nonzero elements...
-    for (int i = 0; i < matrix->nonzero; i++){
-        matrix->A[i] = 1;  // add the weight of the nonzero element (always 1)
-        matrix->JA[i] = graph[i][1];  // add the column of the nonzero element
-        matrix->IA[graph[i][0] + 1]++;  // +1 for a nonzero element in the indexI row
+        matrix->IA[indexI]++;
+        matrix->IA[indexJ]++;
+
+        // Adjust from 1-base to 0-base
+        indexJ--;
+        indexI--;
+
+        if (upperGraph[indexJ].init != 1){
+
+            upperGraph[indexJ].cr = indexI;
+            upperGraph[indexJ].init = 1;
+            upperGraph[indexJ].nextItem = NULL;
+            //printf("IndexI: %d, IndexJ: %d, cr: %d\n", indexI, indexJ, upperGraph[indexJ].cr);
+        } else {
+            RowCol *next = &upperGraph[indexJ];
+
+            while (true){
+                if (next->nextItem != NULL){
+                    next = next->nextItem;
+                } else {
+                    RowCol *temp = (RowCol *) malloc(sizeof(RowCol));
+                    temp->cr = indexI;
+                    temp->init = 1;
+                    temp->nextItem = NULL;
+                    next->nextItem = temp;
+                    //printf("IndexI: %d, IndexJ: %d, cr: %d\n", indexI, indexJ, next->nextItem->cr);
+                    break;
+                }
+            }
+        }
+
+        if (lowerGraph[indexI].init != 1){
+
+            lowerGraph[indexI].cr = indexJ;
+            lowerGraph[indexI].init = 1;
+            lowerGraph[indexI].nextItem = NULL;
+            //printf("IndexI: %d, IndexJ: %d, cr: %d\n", indexI, indexJ, lowerGraph[indexI].cr);
+
+        } else {
+            RowCol *next = &lowerGraph[indexI];
+
+            while (true) {
+                if (next->nextItem != NULL) {
+                    next = next->nextItem;
+                } else {
+                    RowCol *temp = (RowCol *) malloc(sizeof(RowCol));
+                    temp->cr = indexJ;
+                    temp->init = 1;
+                    temp->nextItem = NULL;
+                    next->nextItem = temp;
+                    //printf("IndexI: %d, IndexJ: %d, cr: %d\n", indexI, indexJ, next->nextItem->cr);
+                    break;
+                }
+            }
+        }
     }
-    */
-
-    createCSR(matrix, graph);
 
     for(int i = 1; i <= matrix->size; i++){
         matrix->IA[i] = matrix->IA[i] + matrix->IA[i - 1];
     }
 
-    t2 = time(NULL);
-    printf("CSR create time: %lds\n", (t2 - t1));
+    int aIndex = 0;
+    int lowIndex = 0;
+    RowCol *next;
+
+    for (int i = 0; i < M; ++i) {
+        next = &upperGraph[i];
+        while (next->init != 0){
+            matrix->JA[aIndex] = next->cr;
+            matrix->A[aIndex] = 1;
+            aIndex++;
+
+
+            if(next->nextItem == NULL){
+                break;
+            } else {
+                next = next->nextItem;
+            }
+        }
+
+        if (lowIndex < N) {
+            while (lowerGraph[lowIndex].init != 1) {
+                lowIndex++;
+            }
+
+            next = &lowerGraph[lowIndex];
+
+            while (next->init == 1) {
+                matrix->JA[aIndex] = next->cr;
+                matrix->A[aIndex] = 1;
+                aIndex++;
+
+                if (next->nextItem == NULL) {
+                    break;
+                } else {
+                    next = next->nextItem;
+                }
+            }
+            lowIndex++;
+        }
+    }
 
     return 0;
-}
-
-void printCSR(CSR matrix){
-    printf("A:  [");
-    for (int i = 0; i < matrix.nonzero; i++){
-        printf("%d ", matrix.A[i]);
-    }
-    printf("]\n");
-
-    printf("JA: [");
-    for (int i = 0; i < matrix.nonzero; i++){
-        printf("%d ", matrix.JA[i]);
-    }
-    printf("]\n");
-
-    printf("IA: [");
-    for (int i = 0; i <= matrix.size; i++){
-        printf("%d ", matrix.IA[i]);
-    }
-    printf("]\n");
-
-    printf("Matrix size: %d\n", matrix.size);
 }
 
 int main(int argc, char **argv){
@@ -216,10 +205,13 @@ int main(int argc, char **argv){
     }
 
     CSR testMatrix;
+    time_t t1 = time(NULL);
 
-    readMTX(argv[1], &testMatrix);
+    importFromFile(&testMatrix, argv[1]);
 
-    printCSR(testMatrix);
+    time_t t2 = time(NULL);
+    printf("Time for matrix creation: %lds\n", t2 - t1);
+    //printCSR(testMatrix);
 
     return 0;
 }
