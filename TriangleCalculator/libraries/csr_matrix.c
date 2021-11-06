@@ -40,7 +40,7 @@ void printCSR(CSR matrix){
     printf("Matrix size: %d\n", matrix.size);
 }
 
-int importFromFile(CSR *matrix, char* fileName){
+int createCSR(CSR *matrix, char* fileName){
     FILE *f;
     MM_typecode matrixCode;
     int M, N, nz;
@@ -68,8 +68,20 @@ int importFromFile(CSR *matrix, char* fileName){
         return MM_PREMATURE_EOF;
 
 
-    RowCol *lowerGraph = (RowCol *) malloc(N * sizeof (RowCol));
+    RowCol *lowerGraph = (RowCol*) malloc(N * sizeof (RowCol));
     RowCol *upperGraph = (RowCol*) malloc(M * sizeof (RowCol));
+
+    for (int i = 0; i < N; ++i) {
+        lowerGraph[i].init = 0;
+        lowerGraph[i].nextItem = NULL;
+        lowerGraph[i].cr = -1;
+    }
+
+    for (int i = 0; i < M; ++i) {
+        upperGraph[i].init = 0;
+        upperGraph[i].nextItem = NULL;
+        upperGraph[i].cr = -1;
+    }
 
     // allocate memory for csr vectors
     matrix->A = (int *) malloc(2 * nz * sizeof(int));  // All the nonzero elements of the array
@@ -87,7 +99,7 @@ int importFromFile(CSR *matrix, char* fileName){
     matrix->size = M;
     matrix->nonzero = 2 * nz;  // The number of nonzero elements and consequently the length of the A and JA vectors
 
-    int indexI, indexJ;
+    int indexI = 0, indexJ = 0;
 
     for (int i = 0; i < nz; i++){
         fscanf(f, "%d %d\n", &indexI, &indexJ); // ...read the next line from the file
@@ -104,7 +116,7 @@ int importFromFile(CSR *matrix, char* fileName){
             upperGraph[indexJ].cr = indexI;
             upperGraph[indexJ].init = 1;
             upperGraph[indexJ].nextItem = NULL;
-            //printf("IndexI: %d, IndexJ: %d, cr: %d\n", indexI, indexJ, upperGraph[indexJ].cr);
+            printf("IndexI: %d, IndexJ: %d, cr: %d\n", indexI, indexJ, upperGraph[indexJ].cr);
         } else {
             RowCol *next = &upperGraph[indexJ];
 
@@ -117,7 +129,7 @@ int importFromFile(CSR *matrix, char* fileName){
                     temp->init = 1;
                     temp->nextItem = NULL;
                     next->nextItem = temp;
-                    //printf("IndexI: %d, IndexJ: %d, cr: %d\n", indexI, indexJ, next->nextItem->cr);
+                    printf("IndexI: %d, IndexJ: %d, cr: %d\n", indexI, indexJ, next->nextItem->cr);
                     break;
                 }
             }
@@ -128,7 +140,7 @@ int importFromFile(CSR *matrix, char* fileName){
             lowerGraph[indexI].cr = indexJ;
             lowerGraph[indexI].init = 1;
             lowerGraph[indexI].nextItem = NULL;
-            //printf("IndexI: %d, IndexJ: %d, cr: %d\n", indexI, indexJ, lowerGraph[indexI].cr);
+            printf("IndexI: %d, IndexJ: %d, cr: %d\n", indexI, indexJ, lowerGraph[indexI].cr);
 
         } else {
             RowCol *next = &lowerGraph[indexI];
@@ -142,7 +154,7 @@ int importFromFile(CSR *matrix, char* fileName){
                     temp->init = 1;
                     temp->nextItem = NULL;
                     next->nextItem = temp;
-                    //printf("IndexI: %d, IndexJ: %d, cr: %d\n", indexI, indexJ, next->nextItem->cr);
+                    printf("IndexI: %d, IndexJ: %d, cr: %d\n", indexI, indexJ, next->nextItem->cr);
                     break;
                 }
             }
@@ -159,7 +171,7 @@ int importFromFile(CSR *matrix, char* fileName){
 
     for (int i = 0; i < M; ++i) {
         next = &upperGraph[i];
-        while (next->init != 0){
+        while (next->init == 1){
             matrix->JA[aIndex] = next->cr;
             matrix->A[aIndex] = 1;
             aIndex++;
@@ -173,24 +185,25 @@ int importFromFile(CSR *matrix, char* fileName){
         }
 
         if (lowIndex < N) {
-            while (lowerGraph[lowIndex].init != 1) {
+            if (lowerGraph[lowIndex].init != 1) {
+                lowIndex++;
+            } else {
+
+                next = &lowerGraph[lowIndex];
+
+                while (next->init == 1) {
+                    matrix->JA[aIndex] = next->cr;
+                    matrix->A[aIndex] = 1;
+                    aIndex++;
+
+                    if (next->nextItem == NULL) {
+                        break;
+                    } else {
+                        next = next->nextItem;
+                    }
+                }
                 lowIndex++;
             }
-
-            next = &lowerGraph[lowIndex];
-
-            while (next->init == 1) {
-                matrix->JA[aIndex] = next->cr;
-                matrix->A[aIndex] = 1;
-                aIndex++;
-
-                if (next->nextItem == NULL) {
-                    break;
-                } else {
-                    next = next->nextItem;
-                }
-            }
-            lowIndex++;
         }
     }
 
@@ -207,11 +220,11 @@ int main(int argc, char **argv){
     CSR testMatrix;
     time_t t1 = time(NULL);
 
-    importFromFile(&testMatrix, argv[1]);
+    createCSR(&testMatrix, argv[1]);
 
     time_t t2 = time(NULL);
     printf("Time for matrix creation: %lds\n", t2 - t1);
-    //printCSR(testMatrix);
+    printCSR(testMatrix);
 
     return 0;
 }

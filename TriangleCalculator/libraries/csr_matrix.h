@@ -5,5 +5,7 @@
 
 void printCSR(CSR matrix);
 
+int createCSR(CSR *matrix, char* fileName);
+
 
 #endif
