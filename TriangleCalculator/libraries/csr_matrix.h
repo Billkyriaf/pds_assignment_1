@@ -3,7 +3,7 @@
 
 #include "matrix_manipulation.h"
 
-void printCSR(CSR matrix);
+void printCSR(CSR matrix, int nPrint);
 
 int createCSR(CSR *matrix, char* fileName);
 

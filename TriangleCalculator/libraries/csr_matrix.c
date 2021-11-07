@@ -19,29 +19,78 @@ struct crs {
 typedef struct crs RowCol;
 
 /**
- * The print CSR function simply prints the csr matrix
+ * The print CSR function simply prints the csr matrix. if nPrint is > 0 the function prints the first nPrint and the
+ * last nPrint elements
  * @param matrix The scr matrix the be printed
+ * @param nPrint The number of elements to print. If smaller or equal to 0 prints all
  */
-void printCSR(CSR matrix) {
-    printf("A:  [");
-    for (int i = 0; i < matrix.nonzero; i++) {
-        printf("%d ", matrix.A[i]);
-    }
-    printf("]\n");
+void printCSR(CSR matrix, int nPrint) {
+    if (nPrint < 0 || nPrint > matrix.nonzero) {
+        printf("A:  [");
+        for (int i = 0; i < matrix.nonzero; i++) {
+            printf("%d ", matrix.A[i]);
+        }
+        printf("]\n");
 
-    printf("JA: [");
-    for (int i = 0; i < matrix.nonzero; i++) {
-        printf("%d ", matrix.JA[i]);
-    }
-    printf("]\n");
+        printf("JA: [");
+        for (int i = 0; i < matrix.nonzero; i++) {
+            printf("%d ", matrix.JA[i]);
+        }
+        printf("]\n");
 
-    printf("IA: [");
-    for (int i = 0; i <= matrix.size; i++) {
-        printf("%d ", matrix.IA[i]);
-    }
-    printf("]\n");
+        printf("IA: [");
+        for (int i = 0; i <= matrix.size; i++) {
+            printf("%d ", matrix.IA[i]);
+        }
+        printf("]\n");
 
-    printf("Matrix size: %d\n", matrix.size);
+        printf("Matrix size: %d\n", matrix.size);
+
+    } else if (nPrint < matrix.nonzero){
+        printf("A:  [");
+        for (int i = 0; i < nPrint; i++) {
+            printf("%d ", matrix.A[i]);
+        }
+        printf(".... ");
+        for (int i = matrix.nonzero - nPrint; i < matrix.nonzero; i++) {
+            printf("%d ", matrix.A[i]);
+        }
+        printf("]\n");
+
+
+        printf("JA: [");
+
+        for (int i = 0; i < nPrint; i++) {
+            printf("%d ", matrix.JA[i]);
+        }
+        printf(".... ");
+        for (int i = matrix.nonzero - nPrint; i < matrix.nonzero; i++) {
+            printf("%d ", matrix.JA[i]);
+        }
+        printf("]\n");
+
+        if (nPrint > matrix.size) {
+            printf("IA: [");
+            for (int i = 0; i <= matrix.size; i++) {
+                printf("%d ", matrix.IA[i]);
+            }
+            printf("]\n");
+        } else {
+            printf("IA: [");
+            for (int i = 0; i <= nPrint; i++) {
+                printf("%d ", matrix.IA[i]);
+            }
+            printf(".... ");
+            for (int i = matrix.size - nPrint; i <= matrix.size; i++) {
+                printf("%d ", matrix.IA[i]);
+            }
+            printf("]\n");
+        }
+
+        printf("Matrix size: %d\n", matrix.size);
+    } else {
+        fprintf(stderr, "An error occurred while printing please check the limits you provided!!\n");
+    }
 }
 
 /***
@@ -241,9 +290,8 @@ int createCSR(CSR *matrix, char *fileName) {
     RowCol *next;
 
     for (int i = 1; i < M; ++i) {
-        next = &upperGraph[i - 1];
 
-        // else get the hole row
+        next = &upperGraph[i - 1];
         while (next->init == 1) {
             matrix->JA[aIndex] = next->cr;
             matrix->A[aIndex] = 1;
@@ -255,7 +303,6 @@ int createCSR(CSR *matrix, char *fileName) {
                 next = next->nextItem;
             }
         }
-
 
         next = &lowerGraph[i];
         while (next->init == 1) {
@@ -269,7 +316,6 @@ int createCSR(CSR *matrix, char *fileName) {
                 next = next->nextItem;
             }
         }
-
     }
 
 
@@ -320,7 +366,7 @@ int main(int argc, char **argv) {
     double elapsed = seconds + microseconds*1e-6;
 
     printf("Time for matrix creation: %.5f seconds.\n", elapsed);
-    //printCSR(testMatrix);
+    printCSR(testMatrix, 20);
 
     return 0;
 }
