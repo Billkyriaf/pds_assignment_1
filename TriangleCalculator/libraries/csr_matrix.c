@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <time.h>
+#include <sys/time.h>
 #include "csr_matrix.h"
 #include "matrix_manipulation.h"
 #include "mmio.h"
@@ -63,7 +64,7 @@ void printCSR(CSR matrix) {
  *           15: Matrix is not supported
  */
 int createCSR(CSR *matrix, char *fileName) {
-    FILE *f;  // TODO free memory
+    FILE *f;
     MM_typecode matrixCode;
     int M, N, nz;
 
@@ -118,12 +119,12 @@ int createCSR(CSR *matrix, char *fileName) {
      *                       ├ ...
      *                       └ nextItem: NULL
      */
-    RowCol *lowerGraph = (RowCol *) malloc(N * sizeof(RowCol));  // TODO free memory
+    RowCol *lowerGraph = (RowCol *) malloc(N * sizeof(RowCol));
 
     /* Upper graph works the same way lower graph does with the only difference being that is stores all the nonzero
      * elements found above the main diagonal organized in rows.
      */
-    RowCol *upperGraph = (RowCol *) malloc(M * sizeof(RowCol));  // TODO free memory
+    RowCol *upperGraph = (RowCol *) malloc(M * sizeof(RowCol));
 
     // Set the default values for the uninitialized elements init = 0. cr = -1 and the nextItem pointer is NULL
     for (int i = 0; i < N; ++i) {
@@ -187,8 +188,7 @@ int createCSR(CSR *matrix, char *fileName) {
 
                 } else {
                     // ... and add the new item
-                    RowCol *temp = (RowCol *) malloc(
-                            sizeof(RowCol));  // Allocate memory for the new item... // TODO free memory
+                    RowCol *temp = (RowCol *) malloc(sizeof(RowCol));  // Allocate memory for the new item...
                     temp->cr = indexI;  // ...pass the column number...
                     temp->init = 1;  // ...declare the item initialized...
                     temp->nextItem = NULL;  // ...set the nextItem pointer to NULL as this is the new tail...
@@ -218,7 +218,7 @@ int createCSR(CSR *matrix, char *fileName) {
                     next = next->nextItem;
 
                 } else {
-                    RowCol *temp = (RowCol *) malloc(sizeof(RowCol));  // TODO free memory
+                    RowCol *temp = (RowCol *) malloc(sizeof(RowCol));
                     temp->cr = indexJ;
                     temp->init = 1;
                     temp->nextItem = NULL;
@@ -236,17 +236,18 @@ int createCSR(CSR *matrix, char *fileName) {
     }
 
 
-    // Merge the two graphs to the CSR vectors
+    // Merge the two graphs to the CSR vectors and deallocate the previously allocated memory
     int aIndex = 0;
-    RowCol *next;  // TODO free memory
+    RowCol *next;
 
     for (int i = 1; i < M; ++i) {
         next = &upperGraph[i - 1];
+
+        // else get the hole row
         while (next->init == 1) {
             matrix->JA[aIndex] = next->cr;
             matrix->A[aIndex] = 1;
             aIndex++;
-
 
             if (next->nextItem == NULL) {
                 break;
@@ -254,6 +255,7 @@ int createCSR(CSR *matrix, char *fileName) {
                 next = next->nextItem;
             }
         }
+
 
         next = &lowerGraph[i];
         while (next->init == 1) {
@@ -267,10 +269,34 @@ int createCSR(CSR *matrix, char *fileName) {
                 next = next->nextItem;
             }
         }
+
     }
 
-    // TODO free memory
 
+    // Deallocate the linked list memory
+    RowCol *temp;
+    for (int i = 0; i < M; ++i) {
+        next = upperGraph[i].nextItem;
+        while (next != NULL){
+            temp = next->nextItem;
+            free(next);
+            next = temp;
+        }
+
+        next = lowerGraph[i].nextItem;
+        while (next != NULL){
+            temp = next->nextItem;
+            free(next);
+            next = temp;
+        }
+    }
+
+    // Free the remaining allocated memory.
+    free(upperGraph);
+    free(lowerGraph);
+
+    fclose(f);
+    free(f);
 
     return 0;
 }
@@ -283,13 +309,18 @@ int main(int argc, char **argv) {
     }
 
     CSR testMatrix;
-    time_t t1 = time(NULL);
+    struct timeval begin, end;
+    gettimeofday(&begin, 0);
 
     createCSR(&testMatrix, argv[1]);
 
-    time_t t2 = time(NULL);
-    printf("Time for matrix creation: %lds\n", t2 - t1);
-    printCSR(testMatrix);
+    gettimeofday(&end, 0);
+    long seconds = end.tv_sec - begin.tv_sec;
+    long microseconds = end.tv_usec - begin.tv_usec;
+    double elapsed = seconds + microseconds*1e-6;
+
+    printf("Time for matrix creation: %.5f seconds.\n", elapsed);
+    //printCSR(testMatrix);
 
     return 0;
 }
