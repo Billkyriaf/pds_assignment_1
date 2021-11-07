@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <time.h>
+#include <string.h>
 #include <sys/time.h>
 #include "csr_matrix.h"
 #include "matrix_manipulation.h"
@@ -26,11 +26,13 @@ typedef struct crs RowCol;
  */
 void printCSR(CSR matrix, int nPrint) {
     if (nPrint < 0 || nPrint > matrix.nonzero) {
-        printf("A:  [");
-        for (int i = 0; i < matrix.nonzero; i++) {
-            printf("%d ", matrix.A[i]);
+        if (matrix.A != NULL) {
+            printf("A:  [");
+            for (int i = 0; i < matrix.nonzero; i++) {
+                printf("%d ", matrix.A[i]);
+            }
+            printf("]\n");
         }
-        printf("]\n");
 
         printf("JA: [");
         for (int i = 0; i < matrix.nonzero; i++) {
@@ -46,17 +48,18 @@ void printCSR(CSR matrix, int nPrint) {
 
         printf("Matrix size: %d\n", matrix.size);
 
-    } else if (nPrint < matrix.nonzero){
-        printf("A:  [");
-        for (int i = 0; i < nPrint; i++) {
-            printf("%d ", matrix.A[i]);
+    } else if (nPrint < matrix.nonzero) {
+        if (matrix.A != NULL) {
+            printf("A:  [");
+            for (int i = 0; i < nPrint; i++) {
+                printf("%d ", matrix.A[i]);
+            }
+            printf(".... ");
+            for (int i = matrix.nonzero - nPrint; i < matrix.nonzero; i++) {
+                printf("%d ", matrix.A[i]);
+            }
+            printf("]\n");
         }
-        printf(".... ");
-        for (int i = matrix.nonzero - nPrint; i < matrix.nonzero; i++) {
-            printf("%d ", matrix.A[i]);
-        }
-        printf("]\n");
-
 
         printf("JA: [");
 
@@ -189,8 +192,8 @@ int createCSR(CSR *matrix, char *fileName) {
     }
 
     // allocate memory for csr vectors
-    matrix->A = (int *) malloc(2 * nz * sizeof(int));  // All the nonzero elements of the array
     matrix->JA = (int *) malloc(2 * nz * sizeof(int));  // The columns (j) of all the nonzero elements in the array
+    matrix->A = NULL;  // Matrix A stores all ones for the initial read, so we do not need to allocate the memory
 
 
     // The ith element is the sum of the (i - 1)th element with the number of nonzero elements in the ith row.
@@ -294,7 +297,6 @@ int createCSR(CSR *matrix, char *fileName) {
         next = &upperGraph[i - 1];
         while (next->init == 1) {
             matrix->JA[aIndex] = next->cr;
-            matrix->A[aIndex] = 1;
             aIndex++;
 
             if (next->nextItem == NULL) {
@@ -307,7 +309,6 @@ int createCSR(CSR *matrix, char *fileName) {
         next = &lowerGraph[i];
         while (next->init == 1) {
             matrix->JA[aIndex] = next->cr;
-            matrix->A[aIndex] = 1;
             aIndex++;
 
             if (next->nextItem == NULL) {
@@ -323,14 +324,14 @@ int createCSR(CSR *matrix, char *fileName) {
     RowCol *temp;
     for (int i = 0; i < M; ++i) {
         next = upperGraph[i].nextItem;
-        while (next != NULL){
+        while (next != NULL) {
             temp = next->nextItem;
             free(next);
             next = temp;
         }
 
         next = lowerGraph[i].nextItem;
-        while (next != NULL){
+        while (next != NULL) {
             temp = next->nextItem;
             free(next);
             next = temp;
@@ -348,25 +349,76 @@ int createCSR(CSR *matrix, char *fileName) {
 }
 
 int main(int argc, char **argv) {
+    FILE *file = NULL;
 
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s [martix-market-filename]\n", argv[0]);
-        exit(1);
-    }
+    char graphs[20][256];
 
     CSR testMatrix;
     struct timeval begin, end;
-    gettimeofday(&begin, 0);
 
-    createCSR(&testMatrix, argv[1]);
+    if (argc < 2) {
+        file = fopen(
+                "D:\\University\\AUTH\\Electrical_engineears\\7nth_semester\\Parallel_and_Distributed_Systems\\Assignment_1\\pds_assignment_1\\TriangleCalculator\\graph_paths.txt",
+                "r");
 
-    gettimeofday(&end, 0);
-    long seconds = end.tv_sec - begin.tv_sec;
-    long microseconds = end.tv_usec - begin.tv_usec;
-    double elapsed = seconds + microseconds*1e-6;
+        if (file != NULL) {
+            char buff[256];
+            int i;
 
-    printf("Time for matrix creation: %.5f seconds.\n", elapsed);
-    printCSR(testMatrix, 20);
+            for (i = 0; i < 20; ++i) {
+                if (fgets(buff, 256, file) != NULL) {
+                    buff[strcspn(buff, "\r")] = 0;
+                    strcpy(graphs[i], buff);
+
+                } else {
+                    strcpy(graphs[i], "empty");
+                }
+            }
+
+            // TODO run program
+            for (int j = 0; j < i; ++j) {
+                if (strcmp(graphs[j], "empty") == 0) {
+                    break;
+                }
+
+                printf("\n\nCreating Graph: %s\n", graphs[j]);
+
+                gettimeofday(&begin, 0);
+
+                createCSR(&testMatrix, graphs[j]);
+
+                gettimeofday(&end, 0);
+                long seconds = end.tv_sec - begin.tv_sec;
+                long microseconds = end.tv_usec - begin.tv_usec;
+                double elapsed = seconds + microseconds * 1e-6;
+
+                printf("Time for matrix creation: %.5f seconds.\n", elapsed);
+                printCSR(testMatrix, 20);
+
+                free(testMatrix.IA);
+                free(testMatrix.JA);
+                free(testMatrix.A);
+            }
+
+        } else {
+            fprintf(stderr, "Usage: %s [martix-market-filename]\n", argv[0]);
+            exit(1);
+        }
+
+    } else {
+
+        gettimeofday(&begin, 0);
+
+        createCSR(&testMatrix, argv[1]);
+
+        gettimeofday(&end, 0);
+        long seconds = end.tv_sec - begin.tv_sec;
+        long microseconds = end.tv_usec - begin.tv_usec;
+        double elapsed = seconds + microseconds * 1e-6;
+
+        printf("Time for matrix creation: %.5f seconds.\n", elapsed);
+        printCSR(testMatrix, 20);
+    }
 
     return 0;
 }
