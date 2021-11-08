@@ -10,6 +10,7 @@ typedef struct csr {
     int *JA;
 
     int size;
+    int nonzero;
 } CSR;
 
 
