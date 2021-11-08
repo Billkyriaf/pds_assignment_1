@@ -1,9 +1,6 @@
 #ifndef TRIANGLECALCULATOR_MATRIX_MANIPULATION_H
 #define TRIANGLECALCULATOR_MATRIX_MANIPULATION_H
 
-/**
- *
- */
 typedef struct csr {
     int *A;
     int *IA;
@@ -14,6 +11,8 @@ typedef struct csr {
 } CSR;
 
 
+void product(CSR *input, CSR *output);
+int measureTriangles(CSR input);
 
 
-#endif //TRIANGLECALCULATOR_MATRIX_MANIPULATION_H
+#endif
