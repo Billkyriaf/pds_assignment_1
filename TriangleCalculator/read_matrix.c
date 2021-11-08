@@ -3,7 +3,7 @@
 #include "mmio.h"
 
 
-void createSparseArray(int *I, int *J, int m, int n, int nz){
+/*void createSparseArray(int *I, int *J, int m, int n, int nz){
     fprintf(stdout, "Printing matrix %d x %d...\n", n, m);
     int **matrix = (int **)malloc(n * sizeof(int*));
     for (int i = 0; i < n; ++i) {
@@ -27,7 +27,7 @@ void createSparseArray(int *I, int *J, int m, int n, int nz){
         }
         printf("\n");
     }
-}
+}*/
 
 
 int main(int argc, char *argv[]){
@@ -88,7 +88,7 @@ int main(int argc, char *argv[]){
     for (i=0; i<nz; i++)
         fprintf(stdout, "%d %d\n", I[i]+1, J[i]+1);
 
-    createSparseArray(I, J, M, N, nz);
+    //createSparseArray(I, J, M, N, nz);
 
     return 0;
 }
