@@ -4,10 +4,10 @@
 /**
  *
  */
-/*typedef struct csr {
-    int *values;
-    int *row_ptrs;
-    int *cols;
+typedef struct csr {
+    int *A;
+    int *IA;
+    int *JA;
 
     int size;
     int nonzero;
