@@ -343,39 +343,66 @@ int createCSR(CSR *matrix, char *fileName) {
     free(lowerGraph);
 
     fclose(f);
-    free(f);
 
     return 0;
 }
 
+/**
+ * Function for testing the creation of CSR matrices. There are two ways to get path:
+ *      1. From the commandline arguments
+ *      2. From the graph_path.txt file.
+ *
+ * If you want to use the file method to not provide any cmd line arguments and update the path of the file in the code.
+ * The file must be a .txt file containing the absolute paths for the graph files (one at each line). Please note that
+ * only the first 20 will be read and created. Read the code below for any adjustments.
+ *
+ * @param argc number of cmdline arguments
+ * @param argv cmdline arguments
+ * @return 0 if execution was successful
+ */
 int main(int argc, char **argv) {
     FILE *file = NULL;
 
+    // Holds the absolute paths for the .mtx files. The max length for each path is 256
     char graphs[20][256];
 
+    // The CSR struct object that holds the resulted vectors and other information. See matrix_manipulation.h file
     CSR testMatrix;
+
+    // Vars needed for execution time measurement
     struct timeval begin, end;
 
+    // If no cmdline arguments are given read from the file
     if (argc < 2) {
+
+        // Open the file
         file = fopen(
                 "D:\\University\\AUTH\\Electrical_engineears\\7nth_semester\\Parallel_and_Distributed_Systems\\Assignment_1\\pds_assignment_1\\TriangleCalculator\\graph_paths.txt",
                 "r");
 
+        // If the file was found star reading
         if (file != NULL) {
             char buff[256];
             int i;
 
+            // Get the first 20 lines
             for (i = 0; i < 20; ++i) {
+                // If the EOF is not reached...
                 if (fgets(buff, 256, file) != NULL) {
+                    // ...remove new line char...
                     buff[strcspn(buff, "\r")] = 0;
+                    // ...and add the path to the array
                     strcpy(graphs[i], buff);
 
                 } else {
+                    // if EOF is reached fill the remaining array with "empty" string
                     strcpy(graphs[i], "empty");
                 }
             }
 
-            // TODO run program
+            // close the file
+            fclose(file);
+
             for (int j = 0; j < i; ++j) {
                 if (strcmp(graphs[j], "empty") == 0) {
                     break;
