@@ -4,7 +4,6 @@
 #include <string.h>
 #include <sys/time.h>
 #include "csr_matrix.h"
-#include "matrix_manipulation.h"
 #include "mmio.h"
 
 /**
@@ -18,6 +17,32 @@ struct crs {
 
 typedef struct crs RowCol;
 
+void createSparseArray(int *I, int *J, int m, int n, int nz){
+    fprintf(stdout, "Printing matrix %d x %d...\n", n, m);
+    int **matrix = (int **)malloc(n * sizeof(int*));
+    for (int i = 0; i < n; ++i) {
+        matrix[i] = (int *) malloc(m * sizeof(int));
+    }
+
+    for (int j = 0; j < n; ++j) {
+        for (int i = 0; i < m; ++i) {
+            matrix[j][i] = 0;
+        }
+    }
+
+    for (int k = 0; k < nz; ++k) {
+        matrix[I[k]][J[k]] = 1;
+        matrix[J[k]][I[k]] = 1;
+    }
+
+    for (int j = 0; j < n; ++j) {
+        for (int i = 0; i < m; ++i) {
+            printf("%d ", matrix[j][i]);
+        }
+        printf("\n");
+    }
+}
+
 /**
  * The print CSR function simply prints the csr matrix. if nPrint is > 0 the function prints the first nPrint and the
  * last nPrint elements
@@ -25,7 +50,7 @@ typedef struct crs RowCol;
  * @param nPrint The number of elements to print. If smaller or equal to 0 prints all
  */
 void printCSR(CSR matrix, int nPrint) {
-    if (nPrint < 0 || nPrint > matrix.nonzero) {
+    if (nPrint <= 0 || nPrint > matrix.nonzero) {
         if (matrix.A != NULL) {
             printf("A:  [");
             for (int i = 0; i < matrix.nonzero; i++) {
@@ -356,96 +381,98 @@ int createCSR(CSR *matrix, char *fileName) {
  * The file must be a .txt file containing the absolute paths for the graph files (one at each line). Please note that
  * only the first 20 will be read and created. Read the code below for any adjustments.
  *
+ * WARNING: Comment for release!!
+ *
  * @param argc number of cmdline arguments
  * @param argv cmdline arguments
  * @return 0 if execution was successful
  */
-int main(int argc, char **argv) {
-    FILE *file = NULL;
-
-    // Holds the absolute paths for the .mtx files. The max length for each path is 256
-    char graphs[20][256];
-
-    // The CSR struct object that holds the resulted vectors and other information. See matrix_manipulation.h file
-    CSR testMatrix;
-
-    // Vars needed for execution time measurement
-    struct timeval begin, end;
-
-    // If no cmdline arguments are given read from the file
-    if (argc < 2) {
-
-        // Open the file
-        file = fopen(
-                "D:\\University\\AUTH\\Electrical_engineears\\7nth_semester\\Parallel_and_Distributed_Systems\\Assignment_1\\pds_assignment_1\\TriangleCalculator\\graph_paths.txt",
-                "r");
-
-        // If the file was found star reading
-        if (file != NULL) {
-            char buff[256];
-            int i;
-
-            // Get the first 20 lines
-            for (i = 0; i < 20; ++i) {
-                // If the EOF is not reached...
-                if (fgets(buff, 256, file) != NULL) {
-                    // ...remove new line char...
-                    buff[strcspn(buff, "\r")] = 0;
-                    // ...and add the path to the array
-                    strcpy(graphs[i], buff);
-
-                } else {
-                    // if EOF is reached fill the remaining array with "empty" string
-                    strcpy(graphs[i], "empty");
-                }
-            }
-
-            // close the file
-            fclose(file);
-
-            for (int j = 0; j < i; ++j) {
-                if (strcmp(graphs[j], "empty") == 0) {
-                    break;
-                }
-
-                printf("\n\nCreating Graph: %s\n", graphs[j]);
-
-                gettimeofday(&begin, 0);
-
-                createCSR(&testMatrix, graphs[j]);
-
-                gettimeofday(&end, 0);
-                long seconds = end.tv_sec - begin.tv_sec;
-                long microseconds = end.tv_usec - begin.tv_usec;
-                double elapsed = seconds + microseconds * 1e-6;
-
-                printf("Time for matrix creation: %.5f seconds.\n", elapsed);
-                printCSR(testMatrix, 20);
-
-                free(testMatrix.IA);
-                free(testMatrix.JA);
-                free(testMatrix.A);
-            }
-
-        } else {
-            fprintf(stderr, "Usage: %s [martix-market-filename]\n", argv[0]);
-            exit(1);
-        }
-
-    } else {
-
-        gettimeofday(&begin, 0);
-
-        createCSR(&testMatrix, argv[1]);
-
-        gettimeofday(&end, 0);
-        long seconds = end.tv_sec - begin.tv_sec;
-        long microseconds = end.tv_usec - begin.tv_usec;
-        double elapsed = seconds + microseconds * 1e-6;
-
-        printf("Time for matrix creation: %.5f seconds.\n", elapsed);
-        printCSR(testMatrix, 20);
-    }
-
-    return 0;
-}
+//int main(int argc, char **argv) {
+//    FILE *file = NULL;
+//
+//    // Holds the absolute paths for the .mtx files. The max length for each path is 256
+//    char graphs[20][256];
+//
+//    // The CSR struct object that holds the resulted vectors and other information. See matrix_manipulation.h file
+//    CSR testMatrix;
+//
+//    // Vars needed for execution time measurement
+//    struct timeval begin, end;
+//
+//    // If no cmdline arguments are given read from the file
+//    if (argc < 2) {
+//
+//        // Open the file
+//        file = fopen(
+//                "D:\\University\\AUTH\\Electrical_engineears\\7nth_semester\\Parallel_and_Distributed_Systems\\Assignment_1\\pds_assignment_1\\TriangleCalculator\\graph_paths.txt",
+//                "r");
+//
+//        // If the file was found star reading
+//        if (file != NULL) {
+//            char buff[256];
+//            int i;
+//
+//            // Get the first 20 lines
+//            for (i = 0; i < 20; ++i) {
+//                // If the EOF is not reached...
+//                if (fgets(buff, 256, file) != NULL) {
+//                    // ...remove new line char...
+//                    buff[strcspn(buff, "\r")] = 0;
+//                    // ...and add the path to the array
+//                    strcpy(graphs[i], buff);
+//
+//                } else {
+//                    // if EOF is reached fill the remaining array with "empty" string
+//                    strcpy(graphs[i], "empty");
+//                }
+//            }
+//
+//            // close the file
+//            fclose(file);
+//
+//            for (int j = 0; j < i; ++j) {
+//                if (strcmp(graphs[j], "empty") == 0) {
+//                    break;
+//                }
+//
+//                printf("\n\nCreating Graph: %s\n", graphs[j]);
+//
+//                gettimeofday(&begin, 0);
+//
+//                createCSR(&testMatrix, graphs[j]);
+//
+//                gettimeofday(&end, 0);
+//                long seconds = end.tv_sec - begin.tv_sec;
+//                long microseconds = end.tv_usec - begin.tv_usec;
+//                double elapsed = seconds + microseconds * 1e-6;
+//
+//                printf("Time for matrix creation: %.5f seconds.\n", elapsed);
+//                printCSR(testMatrix, 20);
+//
+//                free(testMatrix.IA);
+//                free(testMatrix.JA);
+//                free(testMatrix.A);
+//            }
+//
+//        } else {
+//            fprintf(stderr, "Usage: %s [martix-market-filename]\n", argv[0]);
+//            exit(1);
+//        }
+//
+//    } else {
+//
+//        gettimeofday(&begin, 0);
+//
+//        createCSR(&testMatrix, argv[1]);
+//
+//        gettimeofday(&end, 0);
+//        long seconds = end.tv_sec - begin.tv_sec;
+//        long microseconds = end.tv_usec - begin.tv_usec;
+//        double elapsed = seconds + microseconds * 1e-6;
+//
+//        printf("Time for matrix creation: %.5f seconds.\n", elapsed);
+//        printCSR(testMatrix, 20);
+//    }
+//
+//    return 0;
+//}
