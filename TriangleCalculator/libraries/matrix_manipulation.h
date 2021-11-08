@@ -10,7 +10,8 @@
     int *cols;
 
     int size;
-} CSR;*/
+    int nonzero;
+} CSR;
 
 
 
