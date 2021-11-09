@@ -21,11 +21,11 @@ int main(int argc, char **argv) {
     double elapsed = seconds + microseconds * 1e-6;
     printf("Time for matrix creation: %.5f seconds.\n", elapsed);
 
-//    printCSR(input, 20);  // debug comment
+    printCSR(input, 50);  // debug comment
 
     gettimeofday(&begin, 0);
 
-    product(&input, &output);
+    productImproved(&input, &output);
 
     gettimeofday(&end, 0);
     seconds = end.tv_sec - begin.tv_sec;

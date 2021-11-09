@@ -12,7 +12,9 @@ typedef struct csr {
 
 
 void product(CSR *input, CSR *output);
+
 int measureTriangles(CSR input);
 
+void productImproved(CSR *input, CSR *output);
 
 #endif
