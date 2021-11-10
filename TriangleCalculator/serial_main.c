@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <sys/time.h>
+#include <stdlib.h>
 #include "csr_matrix.h"
 #include "matrix_manipulation.h"
 
@@ -31,12 +32,13 @@ int main(int argc, char **argv) {
     seconds = end.tv_sec - begin.tv_sec;
     microseconds = end.tv_usec - begin.tv_usec;
     elapsed = seconds + microseconds * 1e-6;
-    printf("Time for triangle calculation: %.5f seconds.\n", elapsed);
+    printf("Time for triangle calculation (product improved): %.5f seconds.\n", elapsed);
 
 //    printCSR(output, 20);  // debug comment
 
-    printf("Number of triangles is: %d", measureTriangles(output));
+    printf("Number of triangles is: %d\n", measureTriangles(output));
 
     return 0;
 }
+
 
