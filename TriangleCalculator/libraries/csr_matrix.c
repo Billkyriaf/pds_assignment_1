@@ -5,6 +5,7 @@
 #include <sys/time.h>
 #include "csr_matrix.h"
 #include "mmio.h"
+#include "write_csr_to_file.h"
 
 /**
  * Struct for the linked list data structure that stores the rows.
@@ -449,6 +450,15 @@ int createCSR(CSR *matrix, char *fileName) {
 //                printf("Time for matrix creation: %.5f seconds.\n", elapsed);
 //                printCSR(testMatrix, 20);
 //
+//                // debug create .csr files for the graph
+//                char *name = graphs[j];
+//                name[strlen(name) - 1] = 'r';
+//                name[strlen(name) - 2] = 's';
+//                name[strlen(name) - 3] = 'c';
+//
+//                writeToFile(name, &testMatrix);
+//
+//
 //                free(testMatrix.IA);
 //                free(testMatrix.JA);
 //                free(testMatrix.A);
@@ -472,6 +482,18 @@ int createCSR(CSR *matrix, char *fileName) {
 //
 //        printf("Time for matrix creation: %.5f seconds.\n", elapsed);
 //        printCSR(testMatrix, 20);
+//
+//        /* debug create .csr files for the graph
+//        char *name = argv[1];
+//        name[strlen(name) - 1] = 'r';
+//        name[strlen(name) - 2] = 's';
+//        name[strlen(name) - 3] = 'c';
+//        writeToFile(name, &testMatrix);
+//        */
+//
+//        free(testMatrix.IA);
+//        free(testMatrix.JA);
+//        free(testMatrix.A);
 //    }
 //
 //    return 0;
