@@ -19,6 +19,12 @@ void writeToFile(char *filename, CSR *matrix){
     fprintf(file, "##CSR File format\n");
     fprintf(file, "%d %d\n", matrix->size, matrix->nonzero);
 
+    // Write the array IA
+    for (int i = 0; i <= matrix->size; ++i) {
+        fprintf(file, "%d ", matrix->A[i]);
+    }
+    fprintf(file, "\n");
+
     // Write the array JA
     for (int i = 0; i < matrix->nonzero; ++i) {
         fprintf(file, "%d ", matrix->JA[i] + 1);

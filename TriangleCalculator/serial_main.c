@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "csr_matrix.h"
 #include "matrix_manipulation.h"
+#include "write_csr_to_file.h"
 
 
 int main(int argc, char **argv) {
@@ -22,7 +23,7 @@ int main(int argc, char **argv) {
     double elapsed = seconds + microseconds * 1e-6;
     printf("Time for matrix creation: %.5f seconds.\n", elapsed);
 
-    printCSR(input, 50);  // debug comment
+    //printCSR(input, 50);  // debug comment
 
     gettimeofday(&begin, 0);
 
@@ -34,7 +35,9 @@ int main(int argc, char **argv) {
     elapsed = seconds + microseconds * 1e-6;
     printf("Time for triangle calculation (product improved): %.5f seconds.\n", elapsed);
 
-//    printCSR(output, 20);  // debug comment
+    printCSR(output, 10);  // debug comment
+
+    writeToFile("youtube.csr", &output);
 
     printf("Number of triangles is: %d\n", measureTriangles(output));
 
