@@ -1,222 +1,281 @@
 #include <stdlib.h>
 #include <pthread.h>
+#include <stdio.h>
 #include "matrix_manipulation.h"
-#define MAX_THREADS 16
 
-typedef struct params {
-    int *elements;
-    int colStart;
-    int colEnd;
-    int rowStart;
-    int rowEnd;
-    int columnNumber;
-    int currentRow;
+/**
+ * Arguments for the threads
+ */
+typedef struct args {
+    CSR *input;
     CSR *output;
-} Params;
+    int start;  // Starting row
+    int stop;  // Ending row (inclusive)
+    int counted;  // The partial (per thread) triangles count
+} ARGS;
 
 
-int colRowProduct(int elements[], int colStart, int colEnd, int rowStart, int rowEnd){
+/**
+ * Calculates the number of triangles of a CSR matrix C where C = A .* (A * A) with A being the initial sparse matrix of
+ * the graph. The steps for finding the triangles from the C matrix are C
+ *          1. Multiply the C matrix with a column matrix e with all the elements equal to 1
+ *          2. The result will be a column matrix with every elements' value denoting how many time the ith node takes
+ *             part in a triangle.
+ *             e.g
+ *                  if A[5] = 6 the 6th node (0-based system) is found in 6 triangles
+ *
+ *          3. The next step is to divide this column matrix by 2. The reason for this is that we have calculated every
+ *             triangle 2 times.
+ *             e.g.
+ *                  if we have nodes A B and C completing a triangle we have counted the ABC triangle and the ACB
+ *                  triangle witch is essentially the same triangle.
+ *
+ *          4. By adding all the elements of the resulting matrix together and dividing by 3 we finally get the number of
+ *             triangles.
+ *
+ * This long and resource consuming process can be simplified by adding all the elements of the A matrix and dividing
+ * by 6 (sum * 1/2 * 1/3 = sum * 1/6)
+ *
+ * @param matrix the matrix to count the triangle of
+ * @return The number of triangles
+ */
+int measureTriangles(CSR *matrix) {
+    int triangles = 0;
+
+    for (int i = 0; i < matrix->nonzero; ++i) {
+        triangles += matrix->A[i];
+    }
+
+    return triangles / 6;
+}
+
+
+/**
+ * Compares the a row and a column and finds the common elements between them. The elements of the column and the row
+ * are the indexes of the nonzero elements so if two elements match in the ordinary multiplication this would mean that
+ * the values in those positions would be multiplied. Since all the values are 1 in the sparse matrix we simply find the
+ * count of those pairs. Both the column and the row are derived from the same vector because the initial matrix is
+ * symmetric and hence the SCS and CSR representations are identical.
+ *
+ * @param elements  The JA array of the input matrix
+ * @param colStart  The starting index of the column to compare
+ * @param colEnd    The finishing index of the column to compare
+ * @param rowStart  The starting index of the column to compare
+ * @param rowEnd    The finishing index of the column to compare
+ *
+ * @return          The count of the common elements found in the row nad the column. This count represents the dot
+ *                  product of the column with the row of the matrix since all the nonzero elements are 1
+ */
+int colRowProduct(const int *elements, int colStart, int colEnd, int rowStart, int rowEnd) {
     int res = 0;
-    int offset = 0;
+    int i = colStart, j = rowStart;
 
-    if (colEnd - colStart > rowEnd - rowStart){
-        for (int i = 0; i <= rowEnd - rowStart; ++i) {
-            if (offset > colEnd - colStart)
-                break;
+    // Both parts of the elements array are sorted in an increasing order so this is a good way to check for common elements
+    while (colEnd >= i && rowEnd >= j){
+        if (elements[i] < elements[j]){
+            i++;
 
+        } else if (elements[i] > elements[j]){
+            j++;
 
-            if (elements[rowStart + i] < elements[colStart + offset]){
-                continue;
-
-            } else if (elements[rowStart + i] > elements[colStart + offset]) {
-                i--;
-                offset++;
-                continue;
-            } else {
-                res++;
-                offset++;
-                continue;
-            }
-        }
-    } else {
-        for (int i = 0; i <= colEnd - colStart; ++i) {
-            if (offset > rowEnd - rowStart)
-                break;
-
-            if (elements[rowStart + offset] < elements[colStart + i]){
-                i--;
-                offset++;
-                continue;
-
-            } else if (elements[rowStart + offset] > elements[colStart + i]) {
-                continue;
-            } else {
-                res++;
-                offset++;
-                continue;
-            }
+        } else {
+            res++;
+            i++;
+            j++;
         }
     }
+
     return res;
 }
 
-void productImproved(CSR *input, CSR *output) {
+/**
+ * Calculates the A .* (A * A) product. The Hadamard product is automatically calculated since we calculate the product
+ * only on the non zero element positions and all the values of the initial array are 1. The function directly multiplies
+ * A matrix with its self in CSR format.
+ *
+ * @param input    The pointer to the initial CSR matrix
+ * @param output   The pointer to the result CSR matrix. The output CSR object MUST be initialized
+ */
+void productSerial(CSR *input, CSR *output) {
     int counter = 0;
-    int firstRow;
-    int lastRow;
-    int firstCol;
-    int lastCol;
-    int nnzInRow = 0;
-    int nnzInCol = 0;
+    int rowStart;  // The starting index of the row
+    int rowEnd;  // The ending index of the row
+    int colStart;  // The starting index of the column
+    int colEnd;  // The ending index of the column
+    int nnzInRow;  // The number of the nonzero elements in the row
+    int nnzInCol;  // The number of the nonzero elements in the column
 
-    output->A = (int *) malloc(input->nonzero * sizeof(int));
-    output->JA = (int *) malloc(input->nonzero * sizeof(int));
-    output->IA = (int *) calloc(input->size + 1, sizeof(int));
-    output->nonzero = input->nonzero;
-    output->size = input->size;
 
+    // For every ith row of the matrix...
     for (int row = 0; row < input->size; row++) {
-        nnzInRow = input->IA[row + 1] - input->IA[row];  // find how many non-zero elements in i-th row
-        firstRow = input->IA[row];
-        lastRow = input->IA[row] + nnzInRow - 1;
+        nnzInRow = input->IA[row + 1] - input->IA[row];  // ...find how many nonzero elements in ith row from the IA vector
+        rowStart = input->IA[row];  // The starting index of the row in the JA vector
+        rowEnd = rowStart + nnzInRow - 1;  // The ending index of the row in the JA vector
 
-        // We want from JA[input->IA[row]] to JA[input->IA[row] + nnzInRow]
-        // JA[firstRow + colNumber] gives me the index of the colNumber th column
-        for (int colNumber = 0; colNumber < nnzInRow; ++colNumber) {
-            nnzInCol = input->IA[input->JA[firstRow + colNumber] + 1] - input->IA[input->JA[firstRow + colNumber]];
-            firstCol = input->IA[input->JA[firstRow + colNumber]];
-            lastCol = input->IA[input->JA[firstRow + colNumber]] + nnzInCol - 1;
+        // We want the elements from JA[input->IA[row]] to JA[input->IA[row] + nnzInRow]
+        // JA[rowStart + colNumber] gives the index of the colNumber th column
+        // So for every column found in the row...
+        for (int col = rowStart; col <= rowEnd; ++col) {
+            // ...find how many nonzero elements in ith col column from the IA vector
+            nnzInCol = input->IA[input->JA[col] + 1] - input->IA[input->JA[col]];
+            colStart = input->IA[input->JA[col]];  // The starting index of the column in the JA vector
+            colEnd = colStart + nnzInCol - 1;  // The ending index of the column in the JA vector
 
-            output->A[counter] = colRowProduct(input->JA, firstCol, lastCol, firstRow, lastRow);
-            output->JA[counter] = input->JA[firstRow + colNumber];
+            // Find the common elements in the row and the column and pass the values to the output JA vector
+            output->A[counter] = colRowProduct(input->JA, colStart, colEnd, rowStart, rowEnd);
+            output->JA[counter] = input->JA[col];
             output->IA[row + 1]++;
             ++counter;
         }
     }
+
+    // IA vector is the same, so we just copy the values. Not really ideal for performance but it only happens once and
+    // is very simple. We want input and output to be independent that's why we don't just point output->IA to the same
+    // memory address as the input->IA
     for (int i = 1; i <= output->size; i++) {
-        output->IA[i] += output->IA[i - 1];
+        output->IA[i] = input->IA[i];
     }
+
+    output->triangles = measureTriangles(output);
+    input->triangles = output->triangles;
 }
 
-void *colRowParallel(void *arg){
-    Params *params = (Params *)arg;
-    int res = 0;
-    int offset = 0;
+/**
+ * The runnable function that every thread runs. The work of every thread is independent from all the other threads so
+ * that no blocking between them occurs and slows them down.
+ *
+ * The work load for every thread is assigned in the productParallel() (see more info there)
+ *
+ * @param args  Void pointer of the ARGS struct object
+ * @return  void
+ */
+void *runnableProduct(void* args){
+    ARGS *arguments = (ARGS *) args;
 
-    if (params->colEnd - params->colStart > params->colEnd - params->rowStart){
-        for (int i = 0; i <= params->rowEnd - params->rowStart; ++i) {
-            if (offset > params->colEnd - params->colStart)
-                break;
+    int rowStart;  // The starting index of the row
+    int rowEnd;  // The ending index of the row
+    int colStart;  // The starting index of the column
+    int colEnd;  // The ending index of the column
+    int nnzInRow;  // The number of the nonzero elements in the row
+    int nnzInCol;  // The number of the nonzero elements in the column
+    int res;
 
+    for (int row = arguments->start; row <= arguments->stop; row++) {
+        nnzInRow = arguments->input->IA[row + 1] - arguments->input->IA[row];  // find how many non-zero JA in i-th row
+        rowStart = arguments->input->IA[row];  // The starting index of the row in the JA vector
+        rowEnd = rowStart + nnzInRow - 1;  // The ending index of the row in the JA vector
 
-            if (params->elements[params->rowStart + i] < params->elements[params->colStart + offset]){
-                continue;
+        // We want the elements from JA[input->IA[row]] to JA[input->IA[row] + nnzInRow]
+        // JA[rowStart + colNumber] gives the index of the colNumber th column
+        // So for every column found in the row...
+        for (int col = rowStart; col <= rowEnd; ++col) {
+            // ...find how many nonzero elements in ith col column from the IA vector
+            nnzInCol = arguments->input->IA[arguments->input->JA[col] + 1] - arguments->input->IA[arguments->input->JA[col]];
+            colStart = arguments->input->IA[arguments->input->JA[col]];  // The starting index of the column in the JA vector
+            colEnd = colStart + nnzInCol - 1;  // The ending index of the column in the JA vector
 
-            } else if (params->elements[params->rowStart + i] > params->elements[params->colStart + offset]) {
-                i--;
-                offset++;
-                continue;
-            } else {
-                res++;
-                offset++;
-                continue;
-            }
-        }
-    } else {
-        for (int i = 0; i <= params->colEnd - params->colStart; ++i) {
-            if (offset > params->rowEnd - params->rowStart)
-                break;
-
-            if (params->elements[params->rowStart + offset] < params->elements[params->colStart + i]){
-                i--;
-                offset++;
-                continue;
-
-            } else if (params->elements[params->rowStart + offset] > params->elements[params->colStart + i]) {
-                continue;
-            } else {
-                res++;
-                offset++;
-                continue;
-            }
+            // Find the common elements in the row and the column and pass the values to the output JA vector
+            res = colRowProduct(arguments->input->JA, colStart, colEnd, rowStart, rowEnd);
+            arguments->counted += res;  // Count triangles as they are calculated
+            arguments->output->A[col] = res;
+            arguments->output->JA[col] = arguments->input->JA[col];
         }
     }
 
-    params->output->A[params->rowStart + params->columnNumber] = res;
-    params->output->JA[params->rowStart + params->columnNumber] = params->elements[params->rowStart + params->columnNumber];
-    params->output->IA[params->currentRow + 1]++;
-
-
+    //printf("Thread exiting...\n");  // debug comment
     pthread_exit(NULL);
 }
 
-void productParallel(CSR *input, CSR *output, int numberOfThreads) {
-    pthread_t *threads;
-    pthread_attr_t pthread_custom_attr;
-    Params *p;
-    int counter = 0;
-    int firstRow;
-    int lastRow;
-    int firstCol;
-    int lastCol;
-    int nnzInRow = 0;
-    int nnzInCol = 0;
 
-    threads = (pthread_t *)malloc(numberOfThreads*sizeof(pthread_t));
+/**
+ * This functions initializes the threads and their parameters distributes the work load depending on the number of
+ * threads and waits for all the threads to finish execution before exiting.
+ *
+ * Every thread is responsible for calculating the product for a range of rows in the matrix. It is done in this way so,
+ * all the threads can be independent. The result is that no locking is needed and that benefits performance greatly
+ *
+ * @param input   The CSR object of the input matrix
+ * @param output  The CSR object for the resulting matrix (must be initialized prior to calling this function)
+ * @param numberOfThreads   The number of threads to divide the work load
+ */
+void productParallel(CSR *input, CSR *output, int numberOfThreads){
+
+    // Initialize the thread attributes
+    pthread_attr_t pthread_custom_attr;
     pthread_attr_init(&pthread_custom_attr);
 
-    output->A = (int *) malloc(input->nonzero * sizeof(int));
-    output->JA = (int *) malloc(input->nonzero * sizeof(int));
-    output->IA = (int *) calloc(input->size + 1, sizeof(int));
-    output->nonzero = input->nonzero;
-    output->size = input->size;
+    // If the requested matrix is too small we calculate it with only one thread
+    if (input->size < numberOfThreads){
 
-    for (int row = 0; row < input->size; row++) {
-        nnzInRow = input->IA[row + 1] - input->IA[row];  // find how many non-zero elements in i-th row
-        firstRow = input->IA[row];
-        lastRow = input->IA[row] + nnzInRow - 1;
+        // Initialize the arguments
+        ARGS argument = {
+                .input = input,
+                .output = output,
+                .start = 0,
+                .stop = input->size - 1,
+                .counted = 0
+        };
 
-        // We want from JA[input->IA[row]] to JA[input->IA[row] + nnzInRow]
-        // JA[firstRow + colNumber] gives me the index of the colNumber th column
-        for (int colNumber = 0; colNumber < nnzInRow; ++colNumber) {
-            nnzInCol = input->IA[input->JA[firstRow + colNumber] + 1] - input->IA[input->JA[firstRow + colNumber]];
-            firstCol = input->IA[input->JA[firstRow + colNumber]];
-            lastCol = input->IA[input->JA[firstRow + colNumber]] + nnzInCol - 1;
+        // Create start and join the thread
+        pthread_t thread;
+        pthread_create(&thread, &pthread_custom_attr, runnableProduct, (void *) &argument);
+        pthread_join(thread, NULL);
 
-            Params params;
+        input->triangles = argument.counted / 6;
+        output->triangles = argument.counted / 6;
 
-            params.elements = input->JA;
-            params.rowStart = firstRow;
-            params.rowEnd = lastRow;
-            params.colStart = firstCol;
-            params.colEnd = lastCol;
-            params.columnNumber = colNumber;
-            params.currentRow = row;
-            params.output = output;
+    } else { // else if the matrix is big enough...
 
+        pthread_t *threads;  // Array of all the threads
+        threads = (pthread_t *)malloc(numberOfThreads * sizeof(pthread_t));
 
+        ARGS *args = (ARGS *) malloc(numberOfThreads * sizeof (ARGS));  // Array of the arguments of every thread
 
-            output->A[counter] = colRowProduct(input->JA, firstCol, lastCol, firstRow, lastRow);
-            output->JA[counter] = input->JA[firstRow + colNumber];
-            output->IA[row + 1]++;
-            ++counter;
+        int blockSize = input->size/numberOfThreads;  // Find how many rows each thread will compute
+
+        // Create all the threads with a given range of rows
+        for (int i = 1; i <= numberOfThreads; ++i) {
+            args[i - 1].input = input;
+            args[i - 1].output = output;
+            args[i - 1].start = blockSize * i - blockSize;
+            args[i - 1].counted = 0;
+
+            if (i == numberOfThreads)
+                args[i - 1].stop = input->size - 1;
+
+            else
+                args[i - 1].stop = args[i - 1].start + blockSize - 1;
+
+            // Create the thread
+            pthread_create(&threads[i - 1], &pthread_custom_attr, runnableProduct, (void *) &args[i - 1]);
         }
+
+        // Join all the threads
+        for (int i = 0; i < numberOfThreads; ++i) {
+            pthread_join(threads[i], NULL);
+        }
+
+        int triangles = 0;
+        // Sum the triangles form all the threads
+        for (int i = 0; i < numberOfThreads; ++i) {
+            triangles += args[i].counted;
+        }
+
+        output->triangles = triangles/6;
+        input->triangles = output->triangles;
+
+        // After execution free the allocated memory
+        free(threads);
+        free(args);
     }
+
+    // IA vector is the same, so we just copy the values. Not really ideal for performance but it only happens once and
+    // is very simple. We want input and output to be independent that's why we don't just point output->IA to the same
+    // memory address as the input->IA
     for (int i = 1; i <= output->size; i++) {
-        output->IA[i] += output->IA[i - 1];
-    }
-}
-
-
-int measureTriangles(CSR input){
-    int triangles = 0;
-
-    for (int i = 0; i < input.nonzero; ++i) {
-        triangles += input.A[i];
+        output->IA[i] = input->IA[i];
     }
 
-    return triangles/6;
+    // Delete the attributes
+    pthread_attr_destroy(&pthread_custom_attr);
 }
-
-
-
