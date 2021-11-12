@@ -278,3 +278,364 @@ printf("Time for triangle calculation (product): %.5f seconds.\n", elapsed);
 
 printf("Number of triangles is: %d", measureTriangles(output));
 }
+
+
+
+// Parallel 1
+
+void *colRowThread(void *args) {
+    while(1) {
+        Params param;
+
+        if (queueEmpty && finished)
+            break;
+
+        pthread_mutex_lock(&mutexQueue);
+        while (queueEmpty) {
+//            printf("Waiting for task...\n");  // debug comment
+            pthread_cond_wait(&condNotEmpty, &mutexQueue);
+        }
+
+//        printf("Consuming task...\n");  // debug comment
+        param = paramQueue[queueEnd];
+        if (queueEnd == TASK_SIZE - 1) {
+            queueEnd = 0;
+        } else {
+            queueEnd++;
+        }
+
+        if (queueEnd == queueStart) {
+            queueEmpty = true;
+        }
+
+        queueFull = false;
+
+        pthread_mutex_unlock(&mutexQueue);
+        pthread_cond_signal(&condNotFull);
+
+        calculateColRowProduct(&param);
+    }
+
+    pthread_exit(NULL);
+}
+
+void productParallel(CSR *input, CSR *output, int numberOfThreads) {
+    pthread_t *threads;
+    pthread_attr_t pthread_custom_attr;
+    int firstRow;
+    int lastRow;
+    int firstCol;
+    int lastCol;
+    int nnzInRow;
+    int nnzInCol;
+
+    threads = (pthread_t *) malloc(numberOfThreads * sizeof(pthread_t));
+    pthread_attr_init(&pthread_custom_attr);
+    pthread_mutex_init(&mutexQueue, NULL);
+    pthread_mutex_init(&mutexOutput, NULL);
+    pthread_cond_init(&condNotEmpty, NULL);
+    pthread_cond_init(&condNotFull, NULL);
+
+    printf("Creating threads...\n");
+    for (int i = 0; i < numberOfThreads; i++) {
+        if (pthread_create(&threads[i], NULL, colRowThread, NULL) != 0) {
+            fprintf(stderr, "Could not create thread %d\n", i);
+            free(threads);
+            return;
+        }
+    }
+
+    printf("Allocate output...\n");
+    output->A = (int *) malloc(input->nonzero * sizeof(int));
+    output->JA = (int *) malloc(input->nonzero * sizeof(int));
+    output->IA = (int *) calloc(input->size + 1, sizeof(int));
+    output->nonzero = input->nonzero;
+    output->size = input->size;
+
+
+    for (int row = 0; row < input->size; row++) {
+        nnzInRow = input->IA[row + 1] - input->IA[row];  // find how many non-zero JA in i-th row
+        firstRow = input->IA[row];
+        lastRow = input->IA[row] + nnzInRow - 1;
+
+        // We want from JA[input->IA[row]] to JA[input->IA[row] + nnzInRow]
+        // JA[firstRow + colNumber] gives me the index of the colNumber th column
+        for (int colNumber = 0; colNumber < nnzInRow; ++colNumber) {
+            nnzInCol = input->IA[input->JA[firstRow + colNumber] + 1] - input->IA[input->JA[firstRow + colNumber]];
+            firstCol = input->IA[input->JA[firstRow + colNumber]];
+            lastCol = input->IA[input->JA[firstRow + colNumber]] + nnzInCol - 1;
+
+            Params params = {
+                    .JA = input->JA,
+                    .rowStart = firstRow,
+                    .rowEnd = lastRow,
+                    .colStart = firstCol,
+                    .colEnd = lastCol,
+                    .columnNumber = colNumber,
+                    .currentRow = row,
+                    .output = output
+            };
+
+            pthread_mutex_lock(&mutexQueue);
+            while (queueFull) {
+                pthread_cond_wait(&condNotFull, &mutexQueue);
+            }
+//            printf("Creating task...\n");  // debug comment
+            paramQueue[queueStart] = params;
+            if(queueStart == TASK_SIZE - 1)
+                queueStart = 0;
+            else
+                queueStart++;
+
+            if (queueEnd == queueStart) {
+                queueFull = true;
+            }
+            queueEmpty = false;
+            pthread_mutex_unlock(&mutexQueue);
+            pthread_cond_signal(&condNotEmpty);
+        }
+    }
+
+    finished = true;
+
+    while (!queueEmpty){
+        usleep(1000);
+    }
+
+    printf("Signaling threads...\n");
+    for (int i = 0; i <= numberOfThreads; ++i) {
+        pthread_cond_signal(&condNotEmpty);
+    }
+
+//    for (int i = 0; i < numberOfThreads; i++) {
+//        if (pthread_join(threads[i], NULL) != 0) {
+//            fprintf(stderr, "Failed to join the thread %d\n", i);
+//        }
+//    }
+
+    for (int i = 1; i <= output->size; i++) {
+        output->IA[i] += output->IA[i - 1];
+    }
+
+    pthread_mutex_destroy(&mutexQueue);
+    pthread_mutex_destroy(&mutexOutput);
+    pthread_cond_destroy(&condNotFull);
+    pthread_cond_destroy(&condNotEmpty);
+}
+
+
+
+// ################## parallel 2
+
+void *colRowThreadImproved(void *args) {
+    while(1) {
+        Params param;
+
+        if (queueEmpty && finished)
+            break;
+
+        pthread_mutex_lock(&mutexQueue);
+        while (queueEmpty) {
+//            printf("Waiting for task...\n");  // debug comment
+            pthread_cond_wait(&condNotEmpty, &mutexQueue);
+        }
+
+//        printf("Consuming task...\n");  // debug comment
+        param = paramQueue[queueEnd];
+        if (queueEnd == TASK_SIZE - 1) {
+            queueEnd = 0;
+        } else {
+            queueEnd++;
+        }
+
+        if (queueEnd == queueStart) {
+            queueEmpty = true;
+        }
+
+        queueFull = false;
+
+        pthread_mutex_unlock(&mutexQueue);
+        pthread_cond_signal(&condNotFull);
+
+        int nnzInCol;
+        int firstCol;
+        int lastCol;
+
+        // We want from JA[input->IA[row]] to JA[input->IA[row] + nnzInRow]
+        // JA[firstRow + colNumber] gives me the index of the colNumber th column
+        for (int colNumber = 0; colNumber < param.nnzInRow; ++colNumber) {
+            nnzInCol = param.IA[param.JA[param.rowStart + colNumber] + 1] - param.IA[param.JA[param.rowStart + colNumber]];
+            firstCol = param.IA[param.JA[param.rowStart + colNumber]];
+            lastCol = param.IA[param.JA[param.rowStart + colNumber]] + nnzInCol - 1;
+
+            param.columnNumber = colNumber;
+            param.colStart = firstCol;
+            param.colEnd = lastCol;
+
+            calculateColRowProduct(&param);
+        }
+    }
+
+    pthread_exit(NULL);
+}
+
+void productParallelImproved(CSR *input, CSR *output, int numberOfThreads){
+    pthread_t *threads;
+    pthread_attr_t pthread_custom_attr;
+    int firstRow;
+    int lastRow;
+    int nnzInRow;
+
+
+    threads = (pthread_t *) malloc(numberOfThreads * sizeof(pthread_t));
+    pthread_attr_init(&pthread_custom_attr);
+    pthread_mutex_init(&mutexQueue, NULL);
+    pthread_mutex_init(&mutexOutput, NULL);
+    pthread_cond_init(&condNotEmpty, NULL);
+    pthread_cond_init(&condNotFull, NULL);
+
+    printf("Creating threads...\n");
+    for (int i = 0; i < numberOfThreads; i++) {
+        if (pthread_create(&threads[i], NULL, colRowThreadImproved, NULL) != 0) {
+            fprintf(stderr, "Could not create thread %d\n", i);
+            free(threads);
+            return;
+        }
+    }
+
+    printf("Allocate output...\n");
+    output->A = (int *) malloc(input->nonzero * sizeof(int));
+    output->JA = (int *) malloc(input->nonzero * sizeof(int));
+    output->IA = (int *) calloc(input->size + 1, sizeof(int));
+    output->nonzero = input->nonzero;
+    output->size = input->size;
+
+
+    for (int row = 0; row < input->size; row++) {
+        nnzInRow = input->IA[row + 1] - input->IA[row];  // find how many non-zero JA in i-th row
+        firstRow = input->IA[row];
+        lastRow = input->IA[row] + nnzInRow - 1;
+
+        Params params = {
+                .JA = input->JA,
+                .IA = input->IA,
+                .rowStart = firstRow,
+                .rowEnd = lastRow,
+                .currentRow = row,
+                .output = output,
+                .nnzInRow = nnzInRow
+        };
+
+        pthread_mutex_lock(&mutexQueue);
+        while (queueFull) {
+            pthread_cond_wait(&condNotFull, &mutexQueue);
+        }
+//            printf("Creating task...\n");  // debug comment
+        paramQueue[queueStart] = params;
+        if(queueStart == TASK_SIZE - 1)
+            queueStart = 0;
+        else
+            queueStart++;
+
+        if (queueEnd == queueStart) {
+            queueFull = true;
+        }
+        queueEmpty = false;
+        pthread_mutex_unlock(&mutexQueue);
+        pthread_cond_signal(&condNotEmpty);
+    }
+
+    finished = true;
+
+    while (!queueEmpty){
+        usleep(1000);
+    }
+
+    printf("Signaling threads...\n");
+    for (int i = 0; i <= numberOfThreads; ++i) {
+        pthread_cond_signal(&condNotEmpty);
+    }
+
+//    for (int i = 0; i < numberOfThreads; i++) {
+//        if (pthread_join(threads[i], NULL) != 0) {
+//            fprintf(stderr, "Failed to join the thread %d\n", i);
+//        }
+//    }
+
+    for (int i = 1; i <= output->size; i++) {
+        output->IA[i] += output->IA[i - 1];
+    }
+
+    pthread_mutex_destroy(&mutexQueue);
+    pthread_mutex_destroy(&mutexOutput);
+    pthread_cond_destroy(&condNotFull);
+    pthread_cond_destroy(&condNotEmpty);
+}
+
+// ######## noclue
+
+void calculateColRowProduct(Params *params){
+    int res = 0;
+    int offset = 0;
+
+    if (params->colEnd - params->colStart > params->colEnd - params->rowStart) {
+        for (int i = 0; i <= params->rowEnd - params->rowStart; ++i) {
+            if (offset > params->colEnd - params->colStart)
+                break;
+
+
+            if (params->JA[params->rowStart + i] < params->JA[params->colStart + offset]) {
+                continue;
+
+            } else if (params->JA[params->rowStart + i] > params->JA[params->colStart + offset]) {
+                i--;
+                offset++;
+                continue;
+            } else {
+                res++;
+                offset++;
+                continue;
+            }
+        }
+    } else {
+        for (int i = 0; i <= params->colEnd - params->colStart; ++i) {
+            if (offset > params->rowEnd - params->rowStart)
+                break;
+
+            if (params->JA[params->rowStart + offset] < params->JA[params->colStart + i]) {
+                i--;
+                offset++;
+                continue;
+
+            } else if (params->JA[params->rowStart + offset] > params->JA[params->colStart + i]) {
+                continue;
+            } else {
+                res++;
+                offset++;
+                continue;
+            }
+        }
+    }
+
+    params->output->A[params->rowStart + params->columnNumber] = res;
+    params->output->JA[params->rowStart + params->columnNumber] = params->JA[params->rowStart +
+                                                                             params->columnNumber];
+
+//    pthread_mutex_lock(&mutexOutput);
+//    params->output->IA[params->currentRow + 1]++;
+//    pthread_mutex_unlock(&mutexOutput);
+}
+
+#define TASK_SIZE 256
+
+Params paramQueue[TASK_SIZE];
+bool queueFull = false;
+bool queueEmpty = true;
+int queueStart, queueEnd = 0;
+
+
+pthread_mutex_t mutexQueue, mutexOutput;
+pthread_cond_t condNotEmpty;
+pthread_cond_t condNotFull;
+
+bool finished = false;  // no tasks left
