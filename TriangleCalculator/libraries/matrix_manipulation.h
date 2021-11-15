@@ -19,4 +19,6 @@ void productSerial(CSR *input, CSR *output);
 
 void productParallel(CSR *input, CSR *output, int numberOfThreads);
 
+int colRowProduct(const int *elements, int colStart, int colEnd, int rowStart, int rowEnd);
+
 #endif
