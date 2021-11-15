@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "csr_matrix.h"
 #include "matrix_manipulation.h"
+#include "m_man_openmp.h"
 
 
 /**
@@ -98,6 +99,27 @@ int main(int argc, char **argv) {
     //printCSR(output, 10);  // debug comment
 
     printf("Number of triangles (parallel) is: %d\n", output.triangles);
+
+    // Reset the output matrix
+    free(output.A);
+    free(output.JA);
+    free(output.IA);
+
+    // Allocate new memory
+    output.A = (int *) malloc(input.nonzero * sizeof(int));
+    output.JA = (int *) malloc(input.nonzero * sizeof(int));
+    output.IA = (int *) calloc(input.size + 1, sizeof(int));
+    output.triangles = 0;
+
+    gettimeofday(&begin, 0);
+    productOpenmp(&input, &output, atoi(argv[2]));
+    gettimeofday(&end, 0);
+
+    printf("Time for triangle calculation (openmp): %.5f seconds.\n", measureTime(begin, end));
+
+    //printCSR(output, 10);  // debug comment
+
+    printf("Number of triangles (openmp) is: %d\n", output.triangles);
 
     return 0;
 }
