@@ -28,7 +28,7 @@ typedef struct args {
  *             triangle 2 times.
  *             e.g.
  *                  if we have nodes A B and C completing a triangle we have counted the ABC triangle and the ACB
- *                  triangle witch is essentially the same triangle.
+ *                  triangle which is essentially the same triangle.
  *
  *          4. By adding all the elements of the resulting matrix together and dividing by 3 we finally get the number of
  *             triangles.
@@ -55,7 +55,7 @@ int measureTriangles(CSR *matrix) {
  * are the indexes of the nonzero elements so if two elements match in the ordinary multiplication this would mean that
  * the values in those positions would be multiplied. Since all the values are 1 in the sparse matrix we simply find the
  * count of those pairs. Both the column and the row are derived from the same vector because the initial matrix is
- * symmetric and hence the SCS and CSR representations are identical.
+ * symmetric and hence the CSC and CSR representations are identical.
  *
  * @param elements  The JA array of the input matrix
  * @param colStart  The starting index of the column to compare
@@ -63,7 +63,7 @@ int measureTriangles(CSR *matrix) {
  * @param rowStart  The starting index of the column to compare
  * @param rowEnd    The finishing index of the column to compare
  *
- * @return          The count of the common elements found in the row nad the column. This count represents the dot
+ * @return          The count of the common elements found in the row and the column. This count represents the dot
  *                  product of the column with the row of the matrix since all the nonzero elements are 1
  */
 int colRowProduct(const int *elements, int colStart, int colEnd, int rowStart, int rowEnd) {
