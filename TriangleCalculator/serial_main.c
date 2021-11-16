@@ -121,6 +121,11 @@ int main(int argc, char **argv) {
 
     printf("Number of triangles (openmp) is: %d\n", output.triangles);
 
+
+    free(output.A);
+    free(output.JA);
+    free(output.IA);
+
     return 0;
 }
 

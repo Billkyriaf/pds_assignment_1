@@ -1,0 +1,8 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+# Datasource local storage ignored files
+/../../../../../../../../../../:\University\AUTH\Electrical_engineears\7nth_semester\Parallel_and_Distributed_Systems\Assignment_1\pds_assignment_1\PythonDiagrams\.idea/dataSources/
+/dataSources.local.xml
+# Editor-based HTTP Client requests
+/httpRequests/
