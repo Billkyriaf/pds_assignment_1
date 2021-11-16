@@ -319,7 +319,7 @@ void *colRowThread(void *args) {
     pthread_exit(NULL);
 }
 
-void productParallel(CSR *input, CSR *output, int numberOfThreads) {
+void pthreadProduct(CSR *input, CSR *output, int numberOfThreads) {
     pthread_t *threads;
     pthread_attr_t pthread_custom_attr;
     int firstRow;

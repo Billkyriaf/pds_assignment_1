@@ -40,7 +40,7 @@ if __name__ == '__main__':
     youtube = "D:\\University\\AUTH\\Electrical_engineears\\7nth_semester\\Parallel_and_Distributed_Systems\\" \
               "Assignment_1\\pds_assignment_1\\Graphs\\com_youtube\\com_youtube.txt"
 
-    file = open(youtube, "r")
+    file = open(belgium, "r")
 
     line = file.readline()
 
@@ -48,18 +48,18 @@ if __name__ == '__main__':
     parallel_dict = {}
     openMP_dict = {}
 
-    if line.startswith("Serial"):
-        time = file.readline()
-
-        for s in time.split():
-            try:
-                times.append(float(s))
-            except ValueError:
-                pass
-
-    print(np.mean(times))
-
-    line = file.readline()
+    # if line.startswith("Serial"):
+    #     time = file.readline()
+    #
+    #     for s in time.split():
+    #         try:
+    #             times.append(float(s))
+    #         except ValueError:
+    #             pass
+    #
+    #     print(np.mean(times))
+    #
+    # line = file.readline()
 
     if line.startswith("Parallel_times"):
         time = file.readline()
@@ -74,10 +74,13 @@ if __name__ == '__main__':
                 except ValueError:
                     pass
 
+            avg_time.pop(0)
+            avg_time.pop(1)
+
             parallel_dict[key] = round(np.mean(avg_time), 5)
             time = file.readline()
 
-    print(parallel_dict)
+        print(parallel_dict)
 
     line = file.readline()
 
@@ -97,7 +100,7 @@ if __name__ == '__main__':
             openMP_dict[key] = round(np.mean(avg_time), 5)
             time = file.readline()
 
-    print(openMP_dict)
+        print(openMP_dict)
 
     plotBarGraph(parallel_dict)
-    plotBarGraph(openMP_dict)
+    #plotBarGraph(openMP_dict)

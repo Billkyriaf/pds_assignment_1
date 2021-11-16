@@ -1,6 +1,5 @@
-#include "m_man_openmp.h"
+#include "openmp_parallel.h"
 #include <omp.h>
-#include "matrix_manipulation.h"
 
 /**
  * Calculates the A .* (A * A) product. The Hadamard product is automatically calculated since we calculate the product
@@ -10,7 +9,7 @@
  * @param input    The pointer to the initial CSR matrix
  * @param output   The pointer to the result CSR matrix. The output CSR object MUST be initialized
  */
-void productOpenmp(CSR *input, CSR *output, int numberOfThreads) {
+void openmpProduct(CSR *input, CSR *output, int numberOfThreads) {
     int rowStart;  // The starting index of the row
     int rowEnd;  // The ending index of the row
     int colStart;  // The starting index of the column

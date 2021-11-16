@@ -7,5 +7,6 @@ void printCSR(CSR matrix, int nPrint);
 
 int createCSR(CSR *matrix, char* fileName);
 
+void createSparseArray(const int *I, const int *J, int m, int n, int nz);
 
 #endif

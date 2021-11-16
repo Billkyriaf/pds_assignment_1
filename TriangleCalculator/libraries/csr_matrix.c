@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <sys/time.h>
+
 #include "csr_matrix.h"
 #include "mmio.h"
 #include "write_csr_to_file.h"
@@ -18,7 +19,7 @@ struct crs {
 
 typedef struct crs RowCol;
 
-void createSparseArray(int *I, int *J, int m, int n, int nz){
+void createSparseArray(const int *I, const int *J, int m, int n, int nz){
     fprintf(stdout, "Printing matrix %d x %d...\n", n, m);
     int **matrix = (int **)malloc(n * sizeof(int*));
     for (int i = 0; i < n; ++i) {
