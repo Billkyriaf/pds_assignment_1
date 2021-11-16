@@ -9,6 +9,7 @@ include_directories(libraries)
 include_directories(OpenMP)
 
 add_executable(SerialCount serial_main.c libraries/matrix_manipulation.c libraries/csr_matrix.c libraries/write_csr_to_file.c ext_libraries/mmio.c OpenMP/m_man_openmp.c)
+add_executable(Testing test_main.c libraries/matrix_manipulation.c libraries/csr_matrix.c libraries/write_csr_to_file.c ext_libraries/mmio.c OpenMP/m_man_openmp.c)
 add_executable(MatrixManipulation libraries/matrix_manipulation.c libraries/csr_matrix.c ext_libraries/mmio.c)
 add_executable(Csr libraries/csr_matrix.c libraries/write_csr_to_file.c ext_libraries/mmio.c)
 
