@@ -1,8 +1,12 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <stdlib.h>
+#include <string.h>
+
 #include "csr_matrix.h"
-#include "cilk_matrix_manipulation.h"
+#include "matrix_manipulation.h"
+#include "pthreads_parallel.h"
+
 
 /**
  * Calculates the elapse time
@@ -11,7 +15,7 @@
  * @param end the ending timestamp
  * @return elapsed time in seconds
  */
-double measureTime(struct timeval begin, struct timeval end){
+double measureTime(struct timeval begin, struct timeval end) {
     long seconds;
     long microseconds;
     double elapsed;
@@ -23,29 +27,26 @@ double measureTime(struct timeval begin, struct timeval end){
     return elapsed;
 }
 
-
 /**
- * Main function runs the load function creates a graph and the calculates the number of triangles both with the serial
- * algorithm and the parallel algorithm. Finally displays the execution time and the result for every algorithm
- *
- *
- * @param argc  number of arguments
- * @param argv  path to file, number of threads
- * @return  0 if everything was ok
+ * Runs the Pthread implementation of the algorithm. Function takes two arguments the path to the .mtx file and the number of threads. 
+ * 
+ * @param argc Number of argumnets
+ * @param argv Arguments
+ * @return 0 if execution was successful 
  */
 int main(int argc, char **argv) {
-
-    if (argc != 2){
+    if (argc != 3) {
         fprintf(stderr, "Wrong number of arguments\n");
         exit(1);
     }
 
+    int nthreads  = atoi(argv[2]);
+    
     // Vars needed for execution time measurement
     struct timeval begin, end;
 
     CSR input;  /// The input CSR matrix
     CSR output;  /// The result of A .* (A * A) in CSR format
-
 
     // Create the CSR matrix from the file path on argv[1]
     gettimeofday(&begin, 0);
@@ -54,7 +55,7 @@ int main(int argc, char **argv) {
 
     printf("Time for matrix read: %.5f seconds.\n", measureTime(begin, end));
 
-    //printCSR(input, 50);  // debug comment
+    
 
     // Allocate memory for the output vectors
     output.A = (int *) malloc(input.nonzero * sizeof(int));
@@ -64,26 +65,17 @@ int main(int argc, char **argv) {
     output.size = input.size;
     output.triangles = 0;
 
-
-
-    // Calculate the product A .* (A * A) with the serial algorithm
     gettimeofday(&begin, 0);
-    cilkProduct(&input, &output);
+    pthreadProduct(&input, &output, nthreads);
     gettimeofday(&end, 0);
 
-    printf("Time for serial triangle calculation: %.5f seconds.\n", measureTime(begin, end));
+    printf("NThreads: %d. Time for triangle calculation (pthread): %.5f seconds.\n",nthreads, measureTime(begin, end));
+    printf("Number of triangles (pthread algorithm) is: %d\n", output.triangles);
 
-    //printCSR(output, 10);  // debug comment
-
-    printf("Number of triangles (cilk) is: %d\n", output.triangles);
-
-    // Reset the output matrix
+    // free the output matrix
     free(output.A);
     free(output.JA);
     free(output.IA);
-
-
+ 
     return 0;
 }
-
-
