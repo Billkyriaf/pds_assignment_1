@@ -15,9 +15,6 @@ typedef struct csr {
     int triangles;  // The number of triangles in the graph represented by the matrix
 } CSR;
 
-void serialProduct(CSR *input, CSR *output);
-
-void pthreadProduct(CSR *input, CSR *output, int numberOfThreads);
 
 int colRowProduct(const int *elements, int colStart, int colEnd, int rowStart, int rowEnd);
 

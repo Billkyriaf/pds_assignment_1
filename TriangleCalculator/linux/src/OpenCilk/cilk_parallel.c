@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cilk/cilk.h>
-#include "cilk_matrix_manipulation.h"
+#include <cilk/cilk_api.h>
+#include "cilk_parallel.h"
+
 
 /**
  * Calculates the A .* (A * A) product. The Hadamard product is automatically calculated since we calculate the product
@@ -11,11 +13,14 @@
  * @param input    The pointer to the initial CSR matrix
  * @param output   The pointer to the result CSR matrix. The output CSR object MUST be initialized
  */
-void cilkProduct(CSR *input, CSR *output) {
+void cilkProduct(CSR *input, CSR *output, int nThreads) {
     int counter = 0;
 
+    char threads[5];
+    sprintf(threads, "%d", nThreads);
+    __cilkrts_set_param("nworkers", threads);
 
-    #pragma cilk grainsize 100
+    #pragma cilk grainsize 10
     // For every ith row of the matrix...
     cilk_for (int row = 0; row < input->size; row++) {
         int rowStart;  // The starting index of the row
