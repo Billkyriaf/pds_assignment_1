@@ -1,7 +1,7 @@
 import numpy as np
 import plotly.graph_objects as go
-import time
 from plotly.offline import iplot
+import time
 
 
 def plotLineChart(data_pthread: dict, data_openmp: dict, data_cilk: dict, t: str):

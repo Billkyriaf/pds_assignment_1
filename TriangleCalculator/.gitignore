@@ -40,7 +40,7 @@
 **/compile_commands.json
 
 include/divisible/*
-
+private/
 
 ## Local 
 
