@@ -1,25 +1,46 @@
 import numpy as np
 import plotly.graph_objects as go
-import plotly.io as pio
+import time
 from plotly.offline import iplot
 
 
-def plotList(data: list):
-    fig = go.FigureWidget()
+def plotLineChart(data_pthread: dict, data_openmp: dict, data_cilk: dict, t: str):
+    n_threads = list(data_pthread.keys())
+    y_pthreads = list(data_pthread.values())
+    y_openmp = list(data_openmp.values())
+    y_cilk = list(data_cilk.values())
 
-    x_axis = np.arange(1, len(data) + 1)
-    fig.add_trace(go.Scatter(x=x_axis, y=data, mode='lines', name='evaluation', text=data,
-                             line=dict(color='#0000ff', width=2)))
+    print("plotting " + t)
+
+    # Create traces
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=n_threads, y=y_pthreads,
+                             mode='lines+markers',
+                             name='Pthread'))
+    fig.add_trace(go.Scatter(x=n_threads, y=y_openmp,
+                             mode='lines+markers',
+                             name='OpenMP'))
+    fig.add_trace(go.Scatter(x=n_threads, y=y_cilk,
+                             mode='lines+markers',
+                             name='OpenCilk'))
+
+    fig.update_layout(
+        title=t,
+        yaxis=dict(
+            title='Execution time (s)',
+            titlefont_size=16,
+            tickfont_size=14,
+        ),
+        xaxis=dict(
+            title='Number of threads',
+            titlefont_size=16,
+            tickfont_size=14,
+        ),
+    )
 
     # fig.show()
-
-    pio.kaleido.scope.default_format = "svg"
-    pio.kaleido.scope.default_width = 1920
-    pio.kaleido.scope.default_height = 1080
-    pio.kaleido.scope.default_scale = 1
-
-    # fig.write_image("fig.svg")
-    fig.show()
+    # fig.write_html(t + ‘plot.html’, auto_open=True)
+    iplot(fig)
 
 
 def plotBarGraph(data: dict):
@@ -30,77 +51,120 @@ def plotBarGraph(data: dict):
     layout = go.Layout(barmode='group', bargroupgap=0)
     fig = go.Figure(data=trace, layout=layout)
 
+    fig.update_layout(
+        title='com-YouTube',
+        yaxis=dict(
+            title='Execution time (s)',
+            titlefont_size=16,
+            tickfont_size=14,
+        ),
+        xaxis=dict(
+            title='Number of threads',
+            titlefont_size=16,
+            tickfont_size=14,
+        ),
+    )
+
     iplot(fig)
 
 
 if __name__ == '__main__':
-    belgium = "D:\\University\\AUTH\\Electrical_engineears\\7nth_semester\\Parallel_and_Distributed_Systems\\" \
-              "Assignment_1\\pds_assignment_1\\Graphs\\belgium_osm\\belgium_osm.txt"
+    graphs = {
+        'Belgium OSM': "belgium_osm.txt",
+        'com-YouTube': "com_youtube.txt",
+        'Mycielskian 13': "mycielskian13.txt",
+        'dblp 2010': "dblp_2010.txt",
+        'NACA 0015': "naca_0015.txt"
+    }
 
-    youtube = "D:\\University\\AUTH\\Electrical_engineears\\7nth_semester\\Parallel_and_Distributed_Systems\\" \
-              "Assignment_1\\pds_assignment_1\\Graphs\\com_youtube\\com_youtube.txt"
+    for graph in graphs:
+        file = open(graphs[graph], 'r')
 
-    file = open(belgium, "r")
+        line = file.readline()
 
-    line = file.readline()
+        serial_time_min = 0
+        pthread_dict = {}
+        openMP_dict = {}
+        cilk_dict = {}
 
-    times = []
-    parallel_dict = {}
-    openMP_dict = {}
+        if line.startswith("Serial"):
+            time = file.readline()
+            serial_times = []
 
-    # if line.startswith("Serial"):
-    #     time = file.readline()
-    #
-    #     for s in time.split():
-    #         try:
-    #             times.append(float(s))
-    #         except ValueError:
-    #             pass
-    #
-    #     print(np.mean(times))
-    #
-    # line = file.readline()
-
-    if line.startswith("Parallel_times"):
-        time = file.readline()
-        while time != "\n":
-            string_arr = time.split(":")
-            key = string_arr[0].split()[1]
-            avg_time = []
-
-            for s in string_arr[1].split():
+            for s in time.split():
                 try:
-                    avg_time.append(float(s))
+                    serial_times.append(float(s))
                 except ValueError:
                     pass
 
-            avg_time.pop(0)
-            avg_time.pop(1)
+            serial_time_min = np.amin(serial_times)
 
-            parallel_dict[key] = round(np.mean(avg_time), 5)
+        line = file.readline()
+
+        if line.startswith("Pthread_times"):
             time = file.readline()
+            while time != "\n":
+                print(time, graph)
+                string_arr = time.split(":")
+                key = string_arr[0].split()[1]
+                avg_time = []
 
-        print(parallel_dict)
+                for s in string_arr[1].split():
+                    try:
+                        avg_time.append(float(s))
+                    except ValueError:
+                        pass
 
-    line = file.readline()
+                # avg_time.pop(0)
+                # avg_time.pop(1)
 
-    if line.startswith("Openmp"):
-        time = file.readline()
-        while time != "\n":
-            string_arr = time.split(":")
-            key = string_arr[0].split()[1]
-            avg_time = []
+                pthread_dict[key] = round(np.amin(avg_time), 4)
+                time = file.readline()
 
-            for s in string_arr[1].split():
-                try:
-                    avg_time.append(float(s))
-                except ValueError:
-                    pass
+            # print(pthread_dict)
 
-            openMP_dict[key] = round(np.mean(avg_time), 5)
+        line = file.readline()
+
+        if line.startswith("Openmp"):
             time = file.readline()
+            while time != "\n":
+                print(time, graph)
+                string_arr = time.split(":")
+                key = string_arr[0].split()[1]
+                avg_time = []
 
-        print(openMP_dict)
+                for s in string_arr[1].split():
+                    try:
+                        avg_time.append(float(s))
+                    except ValueError:
+                        pass
 
-    plotBarGraph(parallel_dict)
-    #plotBarGraph(openMP_dict)
+                openMP_dict[key] = round(np.amin(avg_time), 4)
+                time = file.readline()
+
+            # print(openMP_dict)
+
+        line = file.readline()
+
+        if line.startswith("OpenCilk"):
+            time = file.readline()
+            while time != "\n":
+                print(time, graph)
+                string_arr = time.split(":")
+                key = string_arr[0].split()[1]
+                avg_time = []
+
+                for s in string_arr[1].split():
+                    try:
+                        avg_time.append(float(s))
+                    except ValueError:
+                        pass
+
+                cilk_dict[key] = round(np.max(avg_time), 4)
+                time = file.readline()
+
+            # print(cilk_dict)
+
+        title = graph + ': ' + 'Serial execution time ' + str(serial_time_min) + 's'
+        plotLineChart(pthread_dict, openMP_dict, cilk_dict, title)
+        file.close()
