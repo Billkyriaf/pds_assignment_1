@@ -3,6 +3,6 @@
 
 #include "matrix_manipulation.h"
 
-void cilkProduct(CSR *input, CSR *output);
+void cilkProduct(CSR *input, CSR *output, int nThreads);
 
 #endif
