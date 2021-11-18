@@ -9,7 +9,7 @@
 #include "pthreads_parallel.h"
 #include "serial_mult.h"
 
-#define REPS 1
+#define REPS 2
 
 /**
  * Calculates the elapse time
@@ -36,6 +36,8 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Wrong number of arguments\n");
         exit(1);
     }
+    int nthreads  = atoi(argv[2]);
+    printf("Number of threads: %d\n\n", nthreads);
 
     // Vars needed for execution time measurement
     struct timeval begin, end;
@@ -65,59 +67,50 @@ int main(int argc, char **argv) {
 
 
     // ============================================== Serial Test ==============================================
-    double serialTimes[REPS] = {0};
+     double serialTimes[REPS] = {0};
 
-    for (int i = 0; i < REPS; ++i) {
-        // Allocate memory for the output vectors
-        output.A = (int *) malloc(input.nonzero * sizeof(int));
-        output.JA = (int *) malloc(input.nonzero * sizeof(int));
-        output.IA = (int *) calloc(input.size + 1, sizeof(int));
-        output.nonzero = input.nonzero;
-        output.size = input.size;
-        output.triangles = 0;
+     for (int i = 0; i < REPS; ++i) {
+         // Allocate memory for the output vectors
+         output.A = (int *) malloc(input.nonzero * sizeof(int));
+         output.JA = (int *) malloc(input.nonzero * sizeof(int));
+         output.IA = (int *) calloc(input.size + 1, sizeof(int));
+         output.nonzero = input.nonzero;
+         output.size = input.size;
+         output.triangles = 0;
 
-        // Calculate the product A .* (A * A) with the serial algorithm
-        gettimeofday(&begin, 0);
-        serialProduct(&input, &output);
-        gettimeofday(&end, 0);
+         // Calculate the product A .* (A * A) with the serial algorithm
+         gettimeofday(&begin, 0);
+         serialProduct(&input, &output);
+         gettimeofday(&end, 0);
 
-        serialTimes[i] = measureTime(begin, end);
+         serialTimes[i] = measureTime(begin, end);
 
-        printf("Time for %d serial triangle calculation: %.5f seconds.\n", i, serialTimes[i]);
-        printf("Number of triangles (serial) is: %d\n", output.triangles);
+//         printf("Time for %d serial triangle calculation: %.5f seconds.\n", i, serialTimes[i]);
+//         printf("Number of triangles (serial) is: %d\n", output.triangles);
 
-        // Reset the output matrix
-        free(output.A);
-        free(output.JA);
-        free(output.IA);
-    }
+         // Reset the output matrix
+         free(output.A);
+         free(output.JA);
+         free(output.IA);
+     }
 
-    fprintf(file, "Serial_times:\n");
-    for (int i = 0; i < REPS; ++i) {
-        fprintf(file, "%.5f ", serialTimes[i]);
-    }
+     fprintf(file, "Serial_times:\n");
+     for (int i = 0; i < REPS; ++i) {
+         fprintf(file, "%.5f ", serialTimes[i]);
+     }
 
-    fprintf(file, "\n");
-
-//    if (1){
-//        fclose(file);
-//
-//        free(output.A);
-//        free(output.JA);
-//        free(output.IA);
-//        return 0;
-//    }
+     fprintf(file, "\n");
 
 
     // =========================================== Pthread Test ===========================================
     double **pthreadTimes;
-
-    pthreadTimes = (double**)malloc((atoi(argv[2]) - 1) * sizeof (double *));
-    for (int i = 0; i < atoi(argv[2]); ++i) {
+    pthreadTimes = (double**)malloc(nthreads/4 * sizeof (double *));
+    for (int i = 0; i < nthreads/4; ++i) {
         pthreadTimes[i] = (double *)malloc(REPS * sizeof (double));
     }
 
-    for (int i = 2; i <= atoi(argv[2]); i++) {
+    int indexI = 0;
+    for (int i = 4; i <= nthreads; i+=4) {
         for (int j = 0; j < REPS; ++j) {
             // Allocate memory for the output vectors
             output.A = (int *) malloc(input.nonzero * sizeof(int));
@@ -128,26 +121,27 @@ int main(int argc, char **argv) {
             output.triangles = 0;
 
             gettimeofday(&begin, 0);
-            pthreadProduct(&input, &output, i);
+            pthreadProduct(&input, &output, i - 2);
             gettimeofday(&end, 0);
 
-            pthreadTimes[i - 2][j] = measureTime(begin, end);
+            pthreadTimes[indexI][j] = measureTime(begin, end);
 
-            printf("NThreads: %d. Time for %d time triangle calculation (pthread): %.5f seconds.\n", i, j, pthreadTimes[i - 2][j]);
-            printf("Number of triangles (pthread) is: %d\n", output.triangles);
+//            printf("NThreads: %d. Time for %d time triangle calculation (pthread): %.5f seconds.\n", i, j, pthreadTimes[indexI][j]);
+//            printf("Number of triangles (pthread) is: %d\n", output.triangles);
 
             // Reset the output matrix
             free(output.A);
             free(output.JA);
             free(output.IA);
         }
+        indexI++;
     }
 
     // TODO update python project
     fprintf(file, "Pthread_times:\n");
 
-    for (int i = 0; i < atoi(argv[2]) - 1; ++i) {
-        fprintf(file, "Threads %d: ", i + 2);
+    for (int i = 0; i < nthreads/4; ++i) {
+        fprintf(file, "Threads %d: ", 4 * i + 2);
         for (int j = 0; j < REPS; ++j) {
             fprintf(file, "%.5f ", pthreadTimes[i][j]);
         }
@@ -155,26 +149,18 @@ int main(int argc, char **argv) {
     }
     fprintf(file, "\n");
 
-//    if (1){
-//        fclose(file);
-//
-//        free(output.A);
-//        free(output.JA);
-//        free(output.IA);
-//        return 0;
-//    }
-
 
     // =========================================== OpenMP Test ===========================================
 
     double **openMPTimes;
 
-    openMPTimes = (double**)malloc((atoi(argv[2]) - 1) * sizeof (double *));
-    for (int i = 0; i < atoi(argv[2]); ++i) {
+    openMPTimes = (double**)malloc(nthreads/4 * sizeof (double *));
+    for (int i = 0; i < nthreads/4; ++i) {
         openMPTimes[i] = (double *)malloc(REPS * sizeof (double));
     }
 
-    for (int i = 2; i <= atoi(argv[2]); i++) {
+    indexI = 0;
+    for (int i = 4; i <= nthreads; i+=4) {
         for (int j = 0; j < REPS; ++j) {
             // Allocate memory for the output vectors
             output.A = (int *) malloc(input.nonzero * sizeof(int));
@@ -185,25 +171,26 @@ int main(int argc, char **argv) {
             output.triangles = 0;
 
             gettimeofday(&begin, 0);
-            openmpProduct(&input, &output, i);
+            openmpProduct(&input, &output, i - 2);
             gettimeofday(&end, 0);
 
-            openMPTimes[i - 2][j] = measureTime(begin, end);
+            openMPTimes[indexI][j] = measureTime(begin, end);
 
-            printf("NThreads: %d. Time for %d time triangle calculation (openMP): %.5f seconds.\n", i, j, pthreadTimes[i - 2][j]);
-            printf("Number of triangles (openMP) is: %d\n", output.triangles);
+//            printf("NThreads: %d. Time for %d time triangle calculation (openMP): %.5f seconds.\n", i, j, openMPTimes[indexI][j]);
+//            printf("Number of triangles (openMP) is: %d\n", output.triangles);
 
             // Reset the output matrix
             free(output.A);
             free(output.JA);
             free(output.IA);
         }
+        indexI++;
     }
 
     fprintf(file, "Openmp_times:\n");
 
-    for (int i = 0; i < atoi(argv[2]) - 1; ++i) {
-        fprintf(file, "Threads %d: ", i + 2);
+    for (int i = 0; i < nthreads/4; ++i) {
+        fprintf(file, "Threads %d: ", 4 * i + 2);
         for (int j = 0; j < REPS; ++j) {
             fprintf(file, "%.5f ", openMPTimes[i][j]);
         }
@@ -213,16 +200,13 @@ int main(int argc, char **argv) {
 
     fclose(file);
 
-    for (int i = 0; i < atoi(argv[2]) - 1; ++i) {
+    for (int i = 0; i < nthreads - 1; ++i) {
         free(openMPTimes[i]);
         free(pthreadTimes[i]);
     }
 
     free(openMPTimes);
-    free(pthreadTimes);
-    free(output.A);
-    free(output.JA);
-    free(output.IA);
+   free(pthreadTimes);
 
     return 0;
 }

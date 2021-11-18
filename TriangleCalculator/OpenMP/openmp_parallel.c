@@ -1,5 +1,6 @@
 #include "openmp_parallel.h"
 #include <omp.h>
+#include <stdio.h>
 
 /**
  * Calculates the A .* (A * A) product. The Hadamard product is automatically calculated since we calculate the product
@@ -20,32 +21,36 @@ void openmpProduct(CSR *input, CSR *output, int numberOfThreads) {
 
     omp_set_num_threads(numberOfThreads);
 
-#pragma omp parallel for default(none) schedule(dynamic, 50) shared(input, output) private(nnzInRow, rowStart, rowEnd, nnzInCol, colStart, colEnd) reduction(+: triangleCounter)
-        // For every ith row of the matrix...
-        for (int row = 0; row < input->size; row++) {
-            nnzInRow = input->IA[row + 1] -
-                       input->IA[row];  // ...find how many nonzero elements in ith row from the IA vector
-            rowStart = input->IA[row];  // The starting index of the row in the JA vector
-            rowEnd = rowStart + nnzInRow - 1;  // The ending index of the row in the JA vector
+#pragma omp parallel for default(none) schedule(guided) shared(input, output) \
+private(nnzInRow, rowStart, rowEnd, nnzInCol, colStart, colEnd) reduction(+: triangleCounter)
+    // For every ith row of the matrix...
+    for (int row = 0; row < input->size; row++) {
+//        if(row == 0){
+//            printf("Number of Threads %d\n", omp_get_num_threads());
+//        }
+        nnzInRow = input->IA[row + 1] -
+                   input->IA[row];  // ...find how many nonzero elements in ith row from the IA vector
+        rowStart = input->IA[row];  // The starting index of the row in the JA vector
+        rowEnd = rowStart + nnzInRow - 1;  // The ending index of the row in the JA vector
 
-            // We want the elements from JA[input->IA[row]] to JA[input->IA[row] + nnzInRow]
-            // JA[rowStart + colNumber] gives the index of the colNumber th column
-            // So for every column found in the row...
-            for (int col = rowStart; col <= rowEnd; ++col) {
-                // ...find how many nonzero elements in ith col column from the IA vector
-                nnzInCol = input->IA[input->JA[col] + 1] - input->IA[input->JA[col]];
-                colStart = input->IA[input->JA[col]];  // The starting index of the column in the JA vector
-                colEnd = colStart + nnzInCol - 1;  // The ending index of the column in the JA vector
+        // We want the elements from JA[input->IA[row]] to JA[input->IA[row] + nnzInRow]
+        // JA[rowStart + colNumber] gives the index of the colNumber th column
+        // So for every column found in the row...
+        for (int col = rowStart; col <= rowEnd; ++col) {
+            // ...find how many nonzero elements in ith col column from the IA vector
+            nnzInCol = input->IA[input->JA[col] + 1] - input->IA[input->JA[col]];
+            colStart = input->IA[input->JA[col]];  // The starting index of the column in the JA vector
+            colEnd = colStart + nnzInCol - 1;  // The ending index of the column in the JA vector
 
-                // Find the common elements in the row and the column and pass the values to the output JA vector
-                int res = colRowProduct(input->JA, colStart, colEnd, rowStart, rowEnd);
-                triangleCounter += res;
+            // Find the common elements in the row and the column and pass the values to the output JA vector
+            int res = colRowProduct(input->JA, colStart, colEnd, rowStart, rowEnd);
+            triangleCounter += res;
 
-                output->A[col] = res;
-                output->JA[col] = input->JA[col];
-                output->IA[row + 1]++;
-            }
+            output->A[col] = res;
+            output->JA[col] = input->JA[col];
+            output->IA[row + 1]++;
         }
+    }
 
 
     // IA vector is the same, so we just copy the values. Not really ideal for performance but it only happens once and
