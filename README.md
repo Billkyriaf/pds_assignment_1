@@ -125,7 +125,7 @@ The [*ANSI C library for Matrix Market I/O*](https://math.nist.gov/MatrixMarket/
 ## Compile and run
 
 ### Linux
-Simply run `make all` in the [*TriangleCalculator*](TriangleCalculator) directory. The executable files will be created in the `linux_build` directory along with the `object` files. To run an executable `cd` in the `linux_build` directory and run the command `./executable_name arg1 arg2`. For more information on the command line arguments read bellow
+Simply run `make all` in the [*TriangleCalculator*](TriangleCalculator) directory. The executable files will be created in the `linux_build` directory along with the `object` files. To run an executable `cd` in the `linux_build` directory and run the command `./executable_name arg1 arg2`. Run `make clean` to clear all the object and executable files. For more information on the command line arguments read bellow
 
 ### Windows (OpenCilk not supported)
 The code was developed on windows and specificaly in CLion. The easiest way to run the source code is to import the project to a Clion project. The [*CMakeLists.txt*](TriangleCalculator/CMakeLists.txt) provides targets for executing every module of the program. The only extra step required is to create the configurations and add the command line arguments.
