@@ -2,5 +2,6 @@
 TriangleCalculator/graph_paths.txt
 *.tmp
 Report/~$report.docx
+Report/
 TriangleCalculator/private/spare_code.c
 TriangleCalculator/private/spare_code.c
