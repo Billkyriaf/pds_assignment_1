@@ -140,7 +140,7 @@ The code was developed on windows and specificaly in CLion. The easiest way to r
 * Pthread executable
     ```C
     argv[1] = 'Path to the .mtx file of the praph'
-    argv[2] = number of threads to create (be reasonable max number of threads is not specified)
+    argv[2] = number of threads to spawn and divide the work (be reasonable max number of threads is not specified)
     ```
 * Serial executable
     ```C
