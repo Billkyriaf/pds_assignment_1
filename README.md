@@ -159,8 +159,10 @@ Note: Relative file paths are not supported on Windows.
 
 ## Graphs
 
-  The input of the program is a `graph.mtx` file. This is a `matrix market` file that contains the relations between the nodes oth the graphs. IMPORTANT note: All the graphs must be _**unweighted**_ and _**undirected**_. This is crusial because only then the Sparse matrix of the graph is symmetrical. The code provided in the [*libraries*](TriangleCalculator/src/libraries) directory takes this assumption for granted and does not check if it is true. During the development phase the graphs bellow were used to test the code, along with some small graphs created for debugging purposes. All the files can be found in the [*Graphs*](Graphs) directory.
+The input of the program is a `graph.mtx` file. This is a `matrix market` file that contains the relations between the nodes oth the graphs. IMPORTANT note: All the graphs must be _**unweighted**_ and _**undirected**_. This is crusial because only then the Sparse matrix of the graph is symmetrical. The code provided in the [*libraries*](TriangleCalculator/src/libraries) directory takes this assumption for granted and does not check if it is true. During the development phase the graphs bellow were used to test the code, along with some small graphs created for debugging purposes. All the files can be found in the [*Graphs*](Graphs) directory.
 
+<br/>
+The proceeding table showcases the graphs and creates a reference performance. (The times displayed were given with the assignment)
 <br/>
 
 |                                    Name                                     | Excecution time |
