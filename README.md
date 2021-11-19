@@ -173,7 +173,7 @@ Note: Relative file paths are not supported on Windows.
 
 Note: The excecution time for the above graphs is measured on a two core laptop.
 
-Along with the `graph.mtx` for most of the graphs `graph.csr` files are provided. Those files were created for debbuging purposes and store the Sparse matrices ins CSR format together with information regarding the size of the matrix and the number of non zero elements.
+Along with the `graph.mtx` for most of the graphs `graph.csr` files are provided. Those files were created for debbuging purposes and store the Sparse matrices ins CSR format together with information regarding the size of the matrix and the number of non zero elements. Fianly the text files in the directory store performance data for executions with all the implementations (Serial and Parallel) for every graph.
  
 
 ## Useful links
