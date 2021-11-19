@@ -164,6 +164,7 @@ The input of the program is a `graph.mtx` file. This is a `matrix market` file t
 <br/>
 The proceeding table showcases the graphs and creates a reference performance. (The times displayed were given with the assignment)
 <br/>
+<br/>
 
 |                                    Name                                     | Excecution time |
 | :-------------------------------------------------------------------------: | :-------------: |
