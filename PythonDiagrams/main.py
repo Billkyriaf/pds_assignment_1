@@ -28,44 +28,54 @@ def plotLineChart(data_pthread: dict, data_openmp: dict, data_cilk: dict, t: str
         title=t,
         yaxis=dict(
             title='Execution time (s)',
-            titlefont_size=16,
-            tickfont_size=14,
+            titlefont_size=24,
+            tickfont_size=20,
         ),
         xaxis=dict(
             title='Number of threads',
-            titlefont_size=16,
-            tickfont_size=14,
+            titlefont_size=24,
+            tickfont_size=20,
         ),
+        font=dict(
+            size=24,
+        )
     )
 
-    # fig.show()
+    fig.show()
     # fig.write_html(t + ‘plot.html’, auto_open=True)
-    iplot(fig)
 
 
-def plotBarGraph(data: dict):
-    x_axis = list(data.keys())
-    y_axis = list(data.values())
-    trace = [go.Bar(x=x_axis, y=y_axis)]
+def plotBarGraph(belg: dict, you: dict, naca: dict, mycielskian: dict, db: dict):
+    graph_names = ['Belgium OSM', 'com-Youtube', 'Mycielskian 13', 'dblp-2010', 'NACA 0015']
 
-    layout = go.Layout(barmode='group', bargroupgap=0)
-    fig = go.Figure(data=trace, layout=layout)
+    # belg['serial'], you['serial'], mycielskian[['serial']], db['serial'], naca['serial']
+    y_serial = [belg['serial'], you['serial'], mycielskian['serial'], db['serial'], naca['serial']]
+    y_pthread = [belg['pthread'], you['pthread'], mycielskian['pthread'], db['pthread'], naca['pthread']]
+    y_openmp = [belg['openmp'], you['openmp'], mycielskian['openmp'], db['openmp'], naca['openmp']]
+    y_cilk = belg['opencilk'], you['opencilk'], mycielskian['opencilk'], db['opencilk'], naca['opencilk']
 
+    fig = go.Figure(data=[
+        go.Bar(name='Serial', x=graph_names, y=y_serial),
+        go.Bar(name='Pthread', x=graph_names, y=y_pthread),
+        go.Bar(name='OpenMP', x=graph_names, y=y_openmp),
+        go.Bar(name='OpenCilk', x=graph_names, y=y_cilk)
+    ])
     fig.update_layout(
-        title='com-YouTube',
+        barmode='group',
+        title='Best Performance',
         yaxis=dict(
             title='Execution time (s)',
-            titlefont_size=16,
-            tickfont_size=14,
+            titlefont_size=24,
+            tickfont_size=20,
         ),
         xaxis=dict(
-            title='Number of threads',
-            titlefont_size=16,
-            tickfont_size=14,
+            tickfont_size=20,
         ),
+        font=dict(
+            size=24,
+        )
     )
-
-    iplot(fig)
+    fig.show()
 
 
 if __name__ == '__main__':
@@ -76,6 +86,12 @@ if __name__ == '__main__':
         'dblp 2010': "dblp_2010.txt",
         'NACA 0015': "naca_0015.txt"
     }
+
+    belgium_min = {}
+    youtube_min = {}
+    naca_min = {}
+    mycielskian_min = {}
+    dblp_min = {}
 
     for graph in graphs:
         file = open(graphs[graph], 'r')
@@ -98,6 +114,17 @@ if __name__ == '__main__':
                     pass
 
             serial_time_min = np.amin(serial_times)
+
+        if graph.startswith('B'):
+            belgium_min['serial'] = serial_time_min
+        elif graph.startswith('c'):
+            youtube_min['serial'] = serial_time_min
+        elif graph.startswith('M'):
+            mycielskian_min['serial'] = serial_time_min
+        elif graph.startswith('d'):
+            dblp_min['serial'] = serial_time_min
+        elif graph.startswith('N'):
+            naca_min['serial'] = serial_time_min
 
         line = file.readline()
 
@@ -123,6 +150,17 @@ if __name__ == '__main__':
 
             # print(pthread_dict)
 
+        if graph.startswith('B'):
+            belgium_min['pthread'] = pthread_dict[str(min(pthread_dict, key=pthread_dict.get))]
+        elif graph.startswith('c'):
+            youtube_min['pthread'] = pthread_dict[str(min(pthread_dict, key=pthread_dict.get))]
+        elif graph.startswith('M'):
+            mycielskian_min['pthread'] = pthread_dict[str(min(pthread_dict, key=pthread_dict.get))]
+        elif graph.startswith('d'):
+            dblp_min['pthread'] = pthread_dict[str(min(pthread_dict, key=pthread_dict.get))]
+        elif graph.startswith('N'):
+            naca_min['pthread'] = pthread_dict[str(min(pthread_dict, key=pthread_dict.get))]
+
         line = file.readline()
 
         if line.startswith("Openmp"):
@@ -144,6 +182,17 @@ if __name__ == '__main__':
 
             # print(openMP_dict)
 
+        if graph.startswith('B'):
+            belgium_min['openmp'] = openMP_dict[str(min(openMP_dict, key=openMP_dict.get))]
+        elif graph.startswith('c'):
+            youtube_min['openmp'] = openMP_dict[str(min(openMP_dict, key=openMP_dict.get))]
+        elif graph.startswith('M'):
+            mycielskian_min['openmp'] = openMP_dict[str(min(openMP_dict, key=openMP_dict.get))]
+        elif graph.startswith('d'):
+            dblp_min['openmp'] = openMP_dict[str(min(openMP_dict, key=openMP_dict.get))]
+        elif graph.startswith('N'):
+            naca_min['openmp'] = openMP_dict[str(min(openMP_dict, key=openMP_dict.get))]
+
         line = file.readline()
 
         if line.startswith("OpenCilk"):
@@ -163,8 +212,21 @@ if __name__ == '__main__':
                 cilk_dict[key] = round(np.max(avg_time), 4)
                 time = file.readline()
 
+        if graph.startswith('B'):
+            belgium_min['opencilk'] = cilk_dict[str(min(cilk_dict, key=cilk_dict.get))]
+        elif graph.startswith('c'):
+            youtube_min['opencilk'] = cilk_dict[str(min(cilk_dict, key=cilk_dict.get))]
+        elif graph.startswith('M'):
+            mycielskian_min['opencilk'] = cilk_dict[str(min(cilk_dict, key=cilk_dict.get))]
+        elif graph.startswith('d'):
+            dblp_min['opencilk'] = cilk_dict[str(min(cilk_dict, key=cilk_dict.get))]
+        elif graph.startswith('N'):
+            naca_min['opencilk'] = cilk_dict[str(min(cilk_dict, key=cilk_dict.get))]
+
             # print(cilk_dict)
 
-        title = graph + ': ' + 'Serial execution time ' + str(serial_time_min) + 's'
-        plotLineChart(pthread_dict, openMP_dict, cilk_dict, title)
+        # title = graph + ': ' + 'Serial execution time ' + str(serial_time_min) + 's'
+        # plotLineChart(pthread_dict, openMP_dict, cilk_dict, title)
         file.close()
+
+    plotBarGraph(belgium_min, youtube_min, naca_min, mycielskian_min, dblp_min)
